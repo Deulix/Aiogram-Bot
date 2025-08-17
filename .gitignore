@@ -1,0 +1,5 @@
+.env
+venv
+*.pyc
+1.ipynb
+1.md
