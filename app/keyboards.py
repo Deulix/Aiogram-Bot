@@ -51,13 +51,13 @@ async def init_pizzas(products: List[Product]):
             keyboard.add(
                 InlineKeyboardButton(
                     text=f"Стандарт 25 см",
-                    callback_data=f"add_pizza_{pizza.callback_name}_s",
+                    callback_data=f"add_pizza_{pizza.callback_name}_small",
                 )
             )
             keyboard.add(
                 InlineKeyboardButton(
                     text=f"Большая 35 см",
-                    callback_data=f"add_pizza_{pizza.callback_name}_l",
+                    callback_data=f"add_pizza_{pizza.callback_name}_large",
                 )
             )
     keyboard.add(
@@ -128,9 +128,9 @@ async def init_cart(list_cart_items):
     keyboard = InlineKeyboardBuilder()
     for item in list_cart_items:
         match item[1]:
-            case "s":
+            case "small":
                 size = "стандартная (25 см)"
-            case "l":
+            case "large":
                 size = "большая (35 см)"
             case "1":
                 size = "1 литр"

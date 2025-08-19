@@ -135,7 +135,7 @@ async def menu_cart(callback: CallbackQuery, redis: Redis):
 
 
 @router.callback_query(F.data.startswith("plus_"))
-async def menu_drinks(callback: CallbackQuery, redis: Redis):
+async def plus_quantity(callback: CallbackQuery, redis: Redis):
     cart = f"cart:{callback.from_user.id}"
     await redis.hincrby(cart, callback.data[5:], 1)
     sorted_list_cart_items = await get_formatted_cart(callback.from_user.id, redis)
@@ -146,7 +146,7 @@ async def menu_drinks(callback: CallbackQuery, redis: Redis):
 
 
 @router.callback_query(F.data.startswith("minus_"))
-async def menu_drinks(callback: CallbackQuery, redis: Redis):
+async def minus_quantity(callback: CallbackQuery, redis: Redis):
     cart = f"cart:{callback.from_user.id}"
     quantity = await redis.hget(cart, callback.data[6:])
     if int(quantity) > 1:
@@ -162,7 +162,7 @@ async def menu_drinks(callback: CallbackQuery, redis: Redis):
 
 
 @router.callback_query(F.data.startswith("del_"))
-async def menu_drinks(callback: CallbackQuery, redis: Redis):
+async def delete_from_cart(callback: CallbackQuery, redis: Redis):
     cart = f"cart:{callback.from_user.id}"
     await redis.hdel(cart, callback.data[4:])
     sorted_list_cart_items = await get_formatted_cart(callback.from_user.id, redis)
@@ -173,7 +173,7 @@ async def menu_drinks(callback: CallbackQuery, redis: Redis):
 
 
 @router.callback_query(F.data == "erase_cart")
-async def menu_drinks(callback: CallbackQuery, redis: Redis):
+async def erase_cart(callback: CallbackQuery, redis: Redis):
     user_id = callback.from_user.id
     cart = f"cart:{user_id}"
     await redis.delete(cart)

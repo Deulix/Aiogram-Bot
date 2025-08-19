@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 pizzas = {"pepperoni": "Пепперони", "chili": "Чили", "4seasons": "4 сезона"}
 snacks = {
     "roll-caesar": "Цезарь ролл",
@@ -7,10 +9,20 @@ drinks = ["Coca-Cola", "Fanta", "Sprite"]
 
 
 class Product:
-    def __init__(self, name: str, callback_name: str, category: str):
+    def __init__(
+        self,
+        name: str,
+        callback_name: str,
+        category: str,
+        price: float | Dict[str, float],
+    ):
         self.name = name
         self.callback_name = callback_name
         self.category = category
+        self.price = price
+
+    def get_price(self):
+        return self.price
 
 
 products = []
@@ -21,24 +33,14 @@ for callback_name, name in pizzas.items():
             name=name,
             callback_name=callback_name,
             category="pizza",
+            price={"small": 22.15, "large": 30.55},
         )
     )
-    # products.append(
-    #     Product(
-    #         name=name,
-    #         size="Большая (35 см)",
-    #         callback_name=callback_name,
-    #         category="pizza",
-    #     )
-    # )
+
 
 for callback_name, name in snacks.items():
     products.append(
-        Product(
-            name=name,
-            callback_name=callback_name,
-            category="snack",
-        )
+        Product(name=name, callback_name=callback_name, category="snack", price=8.99)
     )
 
 for name in drinks:
@@ -47,23 +49,6 @@ for name in drinks:
             name=name,
             callback_name=name.lower(),
             category="drink",
+            price={"small": 1.95, "large": 2.99},
         )
     )
-    # products.append(
-    #     Product(
-    #         name=name,
-    #         size="0,5 литра",
-    #         callback_name=name.lower().replace("-", "_"),
-    #         category="drink",
-    #     )
-    # )
-
-# for i in products:
-#     print(i.name, i.callback_name, i.category, i.size)
-
-# from typing import List
-# def abc(products:List[Product]):
-#     for i in products:
-#         if i.callback_name == 'pepperoni':
-#             print(i.name)
-# abc(products)
