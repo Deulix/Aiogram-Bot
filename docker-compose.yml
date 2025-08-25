@@ -1,6 +1,7 @@
 services:
   redis:
     image: redis:7-alpine
+    container_name: redis
     ports:
       - "6379:6379"
     volumes:
@@ -9,7 +10,7 @@ services:
 
   aiobot:
     build: .
-    container_name: bot
+    container_name: aiobot
     depends_on:
       - redis
     environment:
