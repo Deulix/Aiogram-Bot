@@ -3,15 +3,18 @@ import logging
 import os
 
 from aiogram import Bot, Dispatcher
-from dotenv import load_dotenv
 
 from app.handlers import router
 from database.redis_db import init_redis
 
-load_dotenv()
+if not os.getenv("BOT_TOKEN"):
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
 
 async def main():
-    bot = Bot(os.getenv("TOKEN"))
+    bot = Bot(os.getenv("BOT_TOKEN"))
     dp = Dispatcher()
     redis = await init_redis()
     dp["redis"] = redis
