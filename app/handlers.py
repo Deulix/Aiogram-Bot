@@ -95,7 +95,7 @@ async def add_to_cart(callback: CallbackQuery, redis: Redis):
 
     if callback.data.startswith("add_pizza"):
         await callback.message.edit_text(
-            f"Пицца {product.name} {('стандартная 25 см' if callback.data.split('_')[-1] == 's' else 'большая 35 см')} ({quantity} шт) добавлена в корзину",
+            f"Пицца {product.name} {('стандартная 25 см' if size == 'small' else 'большая 35 см')} ({quantity} шт) добавлена в корзину",
             reply_markup=await kb.init_pizzas(products),
         )
     elif callback.data.startswith("add_snack"):
@@ -127,7 +127,7 @@ async def get_formatted_cart(user_id: int, redis: Redis) -> List:
 async def menu_cart(callback: CallbackQuery, redis: Redis):
     sorted_list_cart_items = await get_formatted_cart(callback.from_user.id, redis)
     await callback.message.edit_text(
-        f"{callback.from_user.first_name}, вот твоя корзина:",
+        f"{callback.from_user.first_name}, {"вот твоя корзина:" if sorted_list_cart_items else "твоя корзина пуста"}",
         reply_markup=await kb.init_cart(
             sorted_list_cart_items,
         ),

@@ -2,8 +2,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -13,10 +11,10 @@ services:
     container_name: aiobot
     depends_on:
       - redis
+    env_file:
+      - .env
     environment:
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - BOT_TOKEN=8355478711:AAEWyxiAmdgA7bwotKMqhnX8XZPTZvTqTaQ
     restart: unless-stopped
   
 volumes:

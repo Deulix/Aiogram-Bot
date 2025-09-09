@@ -126,32 +126,33 @@ async def init_drinks(products: List[Product]):
 
 async def init_cart(list_cart_items):
     keyboard = InlineKeyboardBuilder()
-    for item in list_cart_items:
-        match item[1]:
-            case "small":
-                size = "стандартная (25 см)"
-            case "large":
-                size = "большая (35 см)"
-            case "1":
-                size = "1 литр"
-            case "0,5":
-                size = "0,5 литра"
-            case _:
-                size = ""
+    if list_cart_items:
+        for item in list_cart_items:
+            match item[1]:
+                case "small":
+                    size = "стандартная (25 см)"
+                case "large":
+                    size = "большая (35 см)"
+                case "1":
+                    size = "1 литр"
+                case "0,5":
+                    size = "0,5 литра"
+                case _:
+                    size = ""
 
-        keyboard.row(
-            InlineKeyboardButton(
-                text=f"{item[0].name} {size} - {item[2]} шт", callback_data="1"
+            keyboard.row(
+                InlineKeyboardButton(
+                    text=f"{item[0].name} {size} - {item[2]} шт", callback_data="1"
+                )
             )
-        )
+            keyboard.row(
+                InlineKeyboardButton(text=f"+1", callback_data=f"plus_{item[0].callback_name}_{item[1]}"),
+                InlineKeyboardButton(text=f"-1", callback_data=f"minus_{item[0].callback_name}_{item[1]}" if int(item[2]) > 1 or len(list_cart_items) > 1 else "erase_cart"),
+                InlineKeyboardButton(text=f"❌", callback_data=f"del_{item[0].callback_name}_{item[1]}" if len(list_cart_items) > 1 else "erase_cart"),
+            )
         keyboard.row(
-            InlineKeyboardButton(text=f"+1", callback_data=f"plus_{item[0].callback_name}_{item[1]}"),
-            InlineKeyboardButton(text=f"-1", callback_data=f"minus_{item[0].callback_name}_{item[1]}"),
-            InlineKeyboardButton(text=f"❌", callback_data=f"del_{item[0].callback_name}_{item[1]}"),
+            InlineKeyboardButton(text="🗑️ Очистить корзину 🗑️", callback_data="erase_cart")
         )
-    keyboard.row(
-        InlineKeyboardButton(text="🗑️ Очистить корзину 🗑️", callback_data="erase_cart")
-    )
     keyboard.row(
         InlineKeyboardButton(text=" ⬅️ Назад в каталог  ", callback_data="catalog"),
         InlineKeyboardButton(text="⏪ Главное меню ", callback_data="main menu"),
