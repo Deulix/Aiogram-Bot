@@ -95,7 +95,7 @@ class AsyncSQLiteDatabase:
                 result = await session.execute(text("SELECT 1"))
                 return True
         except Exception as e:
-            print(f"❌ Ошибка подключения к БД: {e}")
+            print(f"Ошибка подключения к БД: {e}")
             return False
 
 
