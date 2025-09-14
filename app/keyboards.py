@@ -20,12 +20,6 @@ main = InlineKeyboardMarkup(
     ]
 )
 
-settings = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="YouTube", url="https://www.youtube.com/")]
-    ]
-)
-
 
 async def catalog():
     keyboard = InlineKeyboardBuilder()
@@ -146,12 +140,30 @@ async def init_cart(list_cart_items):
                 )
             )
             keyboard.row(
-                InlineKeyboardButton(text=f"+1", callback_data=f"plus_{item[0].callback_name}_{item[1]}"),
-                InlineKeyboardButton(text=f"-1", callback_data=f"minus_{item[0].callback_name}_{item[1]}" if int(item[2]) > 1 or len(list_cart_items) > 1 else "erase_cart"),
-                InlineKeyboardButton(text=f"❌", callback_data=f"del_{item[0].callback_name}_{item[1]}" if len(list_cart_items) > 1 else "erase_cart"),
+                InlineKeyboardButton(
+                    text=f"+1", callback_data=f"plus_{item[0].callback_name}_{item[1]}"
+                ),
+                InlineKeyboardButton(
+                    text=f"-1",
+                    callback_data=(
+                        f"minus_{item[0].callback_name}_{item[1]}"
+                        if int(item[2]) > 1 or len(list_cart_items) > 1
+                        else "erase_cart"
+                    ),
+                ),
+                InlineKeyboardButton(
+                    text=f"❌",
+                    callback_data=(
+                        f"del_{item[0].callback_name}_{item[1]}"
+                        if len(list_cart_items) > 1
+                        else "erase_cart"
+                    ),
+                ),
             )
         keyboard.row(
-            InlineKeyboardButton(text="🗑️ Очистить корзину 🗑️", callback_data="erase_cart")
+            InlineKeyboardButton(
+                text="🗑️ Очистить корзину 🗑️", callback_data="erase_cart"
+            )
         )
     keyboard.row(
         InlineKeyboardButton(text=" ⬅️ Назад в каталог  ", callback_data="catalog"),

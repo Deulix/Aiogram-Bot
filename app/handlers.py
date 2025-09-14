@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message
 from redis.asyncio import Redis
+from database.sqlite_db import AsyncSQLiteDatabase
 
 import app.keyboards as kb
 from database.products import products
@@ -12,9 +13,16 @@ router = Router()
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, redis: Redis):
+async def cmd_start(message: Message, db: AsyncSQLiteDatabase):
+    user = message.from_user
+    await db.add_user(
+        user_id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+    )
     await message.answer(
-        f"Привет, {message.from_user.first_name}! Выбери пункт меню:",
+        f"Привет, {user.first_name}! Выбери пункт меню:",
         reply_markup=kb.main,
     )
 
@@ -32,11 +40,15 @@ async def handle_photo(message: Message):
     await message.reply(message.photo[-1].file_id)
 
 
-@router.message(F.text == "redis")
-async def handle_redis(message: Message, redis: Redis):
+@router.message(F.text == "db")
+async def handle_redis(message: Message, redis: Redis, db: AsyncSQLiteDatabase):
     await redis.set("REDIS_STATUS", "OK")
-    value = await redis.get("REDIS_STATUS")
-    await message.reply(f"REDIS_STATUS: {value or "FAIL"}")
+    redis_result = await redis.get("REDIS_STATUS")
+    sqlite_result = await db.check_connection()
+    await message.reply(
+        f"REDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
+    )
+    redis.delete("REDIS_STATUS")
 
 
 @router.message(F.text)
