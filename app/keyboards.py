@@ -8,26 +8,26 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
-from database.products import Product
+from database.sqlite_db import Product
 
-main = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="Каталог", callback_data="catalog")],
-        [
-            InlineKeyboardButton(text="Корзина", callback_data="cart"),
-            InlineKeyboardButton(text="Контакты", callback_data="contacts"),
-        ],
-    ]
-)
+
+async def main_menu():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(
+        InlineKeyboardButton(text="Каталог", callback_data="catalog"),
+        InlineKeyboardButton(text="Корзина", callback_data="cart"),
+        InlineKeyboardButton(text="Контакты", callback_data="contacts"),
+    )
+    return keyboard.adjust(1, 2).as_markup()
 
 
 async def catalog():
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(InlineKeyboardButton(text="🍕 Пиццы", callback_data="pizzas"))
-    keyboard.add(InlineKeyboardButton(text="🍟 Закуски", callback_data="snacks"))
-    keyboard.add(InlineKeyboardButton(text="🥤 Напитки", callback_data="drinks"))
     keyboard.add(
-        InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="main menu")
+        InlineKeyboardButton(text="🍕 Пиццы", callback_data="pizzas"),
+        InlineKeyboardButton(text="🍟 Закуски", callback_data="snacks"),
+        InlineKeyboardButton(text="🥤 Напитки", callback_data="drinks"),
+        InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="main menu"),
     )
     return keyboard.adjust(1, 2, 1).as_markup()
 
@@ -40,82 +40,54 @@ async def init_pizzas(products: List[Product]):
                 InlineKeyboardButton(
                     text=f"🍕 {pizza.name}",
                     callback_data=f"pizza_{pizza.callback_name}",
-                )
-            )
-            keyboard.add(
+                ),
                 InlineKeyboardButton(
                     text=f"Стандарт 25 см",
                     callback_data=f"add_pizza_{pizza.callback_name}_small",
-                )
-            )
-            keyboard.add(
+                ),
                 InlineKeyboardButton(
                     text=f"Большая 35 см",
                     callback_data=f"add_pizza_{pizza.callback_name}_large",
-                )
+                ),
             )
     keyboard.add(
-        InlineKeyboardButton(text="⬅️ Назад в каталог", callback_data="catalog")
-    )
-    keyboard.add(
-        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu")
+        InlineKeyboardButton(text="⬅️ Назад в каталог", callback_data="catalog"),
+        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
     )
     return keyboard.adjust(3).as_markup()
 
 
-async def init_snacks(products: List[Product]):
+async def init_category_menu(products: List[Product], category):
     keyboard = InlineKeyboardBuilder()
-    for snack in products:
-        if snack.category == "snack":
-            keyboard.add(
-                InlineKeyboardButton(
-                    text=f"🍟 {snack.name}", callback_data=f"{snack.callback_name}_none"
-                )
-            )
-            keyboard.add(
-                InlineKeyboardButton(
-                    text=f"Добавить в корзину",
-                    callback_data=f"add_snack_{snack.callback_name}_none",
-                )
-            )
+    if category == "пицца":
+        for product in products:
 
-    keyboard.add(
-        InlineKeyboardButton(text="⬅️ Назад в каталог", callback_data="catalog")
-    )
-    keyboard.add(
-        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu")
-    )
-    return keyboard.adjust(2).as_markup()
+            keyboard.add(
+                InlineKeyboardButton(
+                    text=f"🍕 {product.name}", callback_data=product.callback_name
+                ),
+                InlineKeyboardButton(
+                    text=f"Стандарт {product.price_small} BYN",
+                    callback_data="add_pizza_" + product.callback_name + "_small",
+                ),
+                InlineKeyboardButton(
+                    text=f"Большая {product.price_large} BYN",
+                    callback_data="add_pizza_" + product.callback_name + "_large",
+                ),
+            )
+            keyboard.adjust(3)
 
+    elif category == "закуска":
+        pass
 
-async def init_drinks(products: List[Product]):
-    keyboard = InlineKeyboardBuilder()
-    for drink in products:
-        if drink.category == "drink":
-            keyboard.add(
-                InlineKeyboardButton(
-                    text=f"🥤 {drink.name}", callback_data=drink.callback_name
-                )
-            )
-            keyboard.add(
-                InlineKeyboardButton(
-                    text=f"+ 0,5 литра",
-                    callback_data=f"add_drink_{drink.callback_name}_0,5",
-                )
-            )
-            keyboard.add(
-                InlineKeyboardButton(
-                    text=f"+ 1 литр",
-                    callback_data=f"add_drink_{drink.callback_name}_1",
-                )
-            )
-    keyboard.add(
-        InlineKeyboardButton(text="⬅️ Назад в каталог", callback_data="catalog")
+    else:
+        pass
+
+    keyboard.row(
+        InlineKeyboardButton(text="⬅️ Назад в каталог", callback_data="catalog"),
+        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
     )
-    keyboard.add(
-        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu")
-    )
-    return keyboard.adjust(3).as_markup()
+    return keyboard.as_markup()
 
 
 async def init_cart(list_cart_items):
@@ -170,3 +142,50 @@ async def init_cart(list_cart_items):
         InlineKeyboardButton(text="⏪ Главное меню ", callback_data="main menu"),
     )
     return keyboard.as_markup()
+
+
+#### Админка ####
+
+
+async def admin():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(
+        InlineKeyboardButton(text="✙ Добавить продукт", callback_data="product_create"),
+        InlineKeyboardButton(text="🖍️ Изменить продукт", callback_data="product_edit"),
+        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
+        InlineKeyboardButton(
+            text="🛑 Права суперпользователя 🛑", callback_data="set_admin_rights"
+        ),
+        InlineKeyboardButton(text="👤 В меню пользователя", callback_data="main menu"),
+    )
+    return keyboard.adjust(1).as_markup()
+
+
+async def create_product():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(
+        InlineKeyboardButton(text="🍕 Пицца", callback_data="product_create_pizza"),
+        InlineKeyboardButton(text="🍟 Закуска", callback_data="product_create_snack"),
+        InlineKeyboardButton(text="🥤 Напиток", callback_data="product_create_drink"),
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"),
+    )
+    return keyboard.adjust(1).as_markup()
+
+
+async def delete_product():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(
+        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
+        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
+        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
+        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
+    )
+    return keyboard.adjust(1).as_markup()
+
+
+async def cancel_creation():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(
+        InlineKeyboardButton(text="🛑 Отмена создания", callback_data="admin"),
+    )
+    return keyboard.adjust().as_markup()

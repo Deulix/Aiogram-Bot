@@ -36,13 +36,14 @@ class User(Base):
 
 class Product(Base):
     __tablename__ = "products"
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False)
-    size = Column(String(50), nullable=True)
-    description = Column(Text, nullable=True)
-    price = Column(Float, nullable=False)
-    category = Column(String(100), nullable=True)
-    created_at = Column(
+    id: int = Column(Integer, primary_key=True)
+    name: str = Column(String(255), nullable=False)
+    callback_name: str = Column(String(255), nullable=False)
+    description: str | None = Column(Text, nullable=True)
+    price_small: float = Column(Float, nullable=False)
+    price_large: float = Column(Float, nullable=True)
+    category: str = Column(String(100), nullable=True)
+    created_at: datetime = Column(
         DateTime,
         server_default=text("CURRENT_TIMESTAMP"),
         default=func.now(),
@@ -63,33 +64,83 @@ class AsyncSQLiteDatabase:
     async def init_db(self):
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        print(f"Была создана AsyncSQLite база данных: database/shop.db")
+        print(f"SQLITE CONNECTED")
         return self
 
     async def add_user(
         self, user_id: int, username: str, first_name: str, last_name: str | None
     ):
         async with self.AsyncSession() as session:
-            user = User(
-                user_id=user_id,
-                username=username,
-                first_name=first_name,
-                last_name=last_name,
-            )
-            session.add(user)
-            await session.commit()
+            try:
+                script = select(User).where(User.user_id == user_id)
+                result = await session.execute(script)
+                existing_user = result.scalar_one_or_none()
+                if existing_user:
+                    if (
+                        existing_user.username != username
+                        or existing_user.first_name != first_name
+                        or existing_user.last_name != last_name
+                    ):
+
+                        existing_user.username = username
+                        existing_user.first_name = first_name
+                        existing_user.last_name = last_name
+                else:
+                    new_user = User(
+                        user_id=user_id,
+                        username=username,
+                        first_name=first_name,
+                        last_name=last_name,
+                    )
+                    session.add(new_user)
+                await session.commit()
+
+            except Exception as e:
+                await session.rollback()
+                print(f"Error adding user: {e}")
+
+    async def add_product(
+        self,
+        name: str,
+        callback_name: str,
+        price_small: float,
+        price_large: float,
+        category: str,
+        description: str | None,
+    ):
+        async with self.AsyncSession() as session:
+            try:
+                product = Product(
+                    name=name,
+                    callback_name=callback_name,
+                    price_small=price_small,
+                    price_large=price_large,
+                    category=category,
+                    description=description,
+                )
+                session.add(product)
+                await session.commit()
+
+            except Exception as e:
+                await session.rollback()
+                print(f"Error adding product: {e}")
 
     async def get_products(self):
         async with self.AsyncSession() as session:
             result = await session.execute(select(Product))
             return result.scalars().all()
 
-    async def get_product(self, product_id: int):
+    async def get_product_by_callback_name(self, callback_name):
+        async with self.AsyncSession() as session:
+            result = await session.execute(select(Product).where(Product.callback_name == callback_name))
+            return result.scalar()
+
+    async def get_products_by_category(self, category: int):
         async with self.AsyncSession() as session:
             result = await session.execute(
-                select(Product).where(Product.id == product_id)
+                select(Product).where(Product.category == category)
             )
-            return result.scalar()
+            return result.scalars().all()
 
     async def check_connection(self):
         try:
