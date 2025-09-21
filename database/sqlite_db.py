@@ -43,12 +43,53 @@ class Product(Base):
     price_small: float = Column(Float, nullable=False)
     price_large: float = Column(Float, nullable=True)
     category: str = Column(String(100), nullable=True)
+    emoji: str = Column(String(5), nullable=True)
     created_at: datetime = Column(
         DateTime,
         server_default=text("CURRENT_TIMESTAMP"),
         default=func.now(),
         nullable=False,
     )
+
+    def __get_size_text(self):
+        match self.category:
+            case "pizza":
+                size_text = {"small": "cтандарт", "large": "большая"}
+            case "snack":
+                size_text = {"small": "cтандарт", "large": "большая"}
+            case "drink":
+                size_text = {"small": "0.5 литра", "large": "1 литр"}
+            case "cake":
+                size_text = {"small": "cтандарт", "large": "большой"}
+        return size_text
+
+    @property
+    def small_size_text(self):
+        if self.price_large:
+            return self.__get_size_text()["small"]
+        else:
+            return ""
+
+    @property
+    def large_size_text(self):
+        return self.__get_size_text()["large"]
+
+    def get_current_size_text(self, size):
+        if self.price_large:
+            return self.__get_size_text()[size]
+        else:
+            return ""
+
+    def get_current_price(self, size):
+        if size == "large":
+            return self.price_large
+        elif size == "small":
+            return self.price_small
+        else:
+            return 0
+
+    def has_only_one_size(self):
+        return self.price_large is None
 
 
 class AsyncSQLiteDatabase:
@@ -107,6 +148,7 @@ class AsyncSQLiteDatabase:
         price_large: float,
         category: str,
         description: str | None,
+        emoji: str,
     ):
         async with self.AsyncSession() as session:
             try:
@@ -117,6 +159,7 @@ class AsyncSQLiteDatabase:
                     price_large=price_large,
                     category=category,
                     description=description,
+                    emoji=emoji,
                 )
                 session.add(product)
                 await session.commit()
@@ -132,7 +175,9 @@ class AsyncSQLiteDatabase:
 
     async def get_product_by_callback_name(self, callback_name):
         async with self.AsyncSession() as session:
-            result = await session.execute(select(Product).where(Product.callback_name == callback_name))
+            result = await session.execute(
+                select(Product).where(Product.callback_name == callback_name)
+            )
             return result.scalar()
 
     async def get_products_by_category(self, category: int):

@@ -32,56 +32,26 @@ async def catalog():
     return keyboard.adjust(1, 2, 1).as_markup()
 
 
-async def init_pizzas(products: List[Product]):
-    keyboard = InlineKeyboardBuilder()
-    for pizza in products:
-        if pizza.category == "pizza":
-            keyboard.add(
-                InlineKeyboardButton(
-                    text=f"🍕 {pizza.name}",
-                    callback_data=f"pizza_{pizza.callback_name}",
-                ),
-                InlineKeyboardButton(
-                    text=f"Стандарт 25 см",
-                    callback_data=f"add_pizza_{pizza.callback_name}_small",
-                ),
-                InlineKeyboardButton(
-                    text=f"Большая 35 см",
-                    callback_data=f"add_pizza_{pizza.callback_name}_large",
-                ),
-            )
-    keyboard.add(
-        InlineKeyboardButton(text="⬅️ Назад в каталог", callback_data="catalog"),
-        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
-    )
-    return keyboard.adjust(3).as_markup()
-
-
 async def init_category_menu(products: List[Product], category):
     keyboard = InlineKeyboardBuilder()
-    if category == "пицца":
-        for product in products:
+    for product in products:
+        name_btn = InlineKeyboardButton(
+            text=f"{product.emoji} {product.name}",
+            callback_data=f"info_{product.callback_name}",
+        )
+        small_size_btn = InlineKeyboardButton(
+            text=f"{product.small_size_text} {product.price_small} BYN",
+            callback_data=f"add_{category}_{product.callback_name}_small",
+        )
+        large_size_btn = InlineKeyboardButton(
+            text=f"{product.large_size_text} {product.price_large} BYN",
+            callback_data=f"add_{category}_{product.callback_name}_large",
+        )
 
-            keyboard.add(
-                InlineKeyboardButton(
-                    text=f"🍕 {product.name}", callback_data=product.callback_name
-                ),
-                InlineKeyboardButton(
-                    text=f"Стандарт {product.price_small} BYN",
-                    callback_data="add_pizza_" + product.callback_name + "_small",
-                ),
-                InlineKeyboardButton(
-                    text=f"Большая {product.price_large} BYN",
-                    callback_data="add_pizza_" + product.callback_name + "_large",
-                ),
-            )
-            keyboard.adjust(3)
-
-    elif category == "закуска":
-        pass
-
-    else:
-        pass
+        if not product.has_only_one_size():
+            keyboard.row(name_btn, small_size_btn, large_size_btn)
+        else:
+            keyboard.row(name_btn, small_size_btn)
 
     keyboard.row(
         InlineKeyboardButton(text="⬅️ Назад в каталог", callback_data="catalog"),
@@ -90,43 +60,38 @@ async def init_category_menu(products: List[Product], category):
     return keyboard.as_markup()
 
 
-async def init_cart(list_cart_items):
+async def init_cart(list_cart_items: List):
     keyboard = InlineKeyboardBuilder()
+
     if list_cart_items:
-        for item in list_cart_items:
-            match item[1]:
-                case "small":
-                    size = "стандартная (25 см)"
-                case "large":
-                    size = "большая (35 см)"
-                case "1":
-                    size = "1 литр"
-                case "0,5":
-                    size = "0,5 литра"
-                case _:
-                    size = ""
+        for product, size, quantity in list_cart_items:
+            product: Product
+            size: str
+            quantity: str
 
             keyboard.row(
                 InlineKeyboardButton(
-                    text=f"{item[0].name} {size} - {item[2]} шт", callback_data="1"
+                    text=f"{product.emoji} {product.name} {product.get_current_size_text(size)} - {quantity} шт -- {product.get_current_price(size) * int(quantity)} BYN",
+                    callback_data="1",
                 )
             )
             keyboard.row(
                 InlineKeyboardButton(
-                    text=f"+1", callback_data=f"plus_{item[0].callback_name}_{item[1]}"
+                    text=f"+1",
+                    callback_data=f"plus_{product.category}_{product.callback_name}_{size}",
                 ),
                 InlineKeyboardButton(
                     text=f"-1",
                     callback_data=(
-                        f"minus_{item[0].callback_name}_{item[1]}"
-                        if int(item[2]) > 1 or len(list_cart_items) > 1
+                        f"minus_{product.category}_{product.callback_name}_{size}"
+                        if int(quantity) > 1 or len(list_cart_items) > 1
                         else "erase_cart"
                     ),
                 ),
                 InlineKeyboardButton(
                     text=f"❌",
                     callback_data=(
-                        f"del_{item[0].callback_name}_{item[1]}"
+                        f"del_{product.category}_{product.callback_name}_{size}"
                         if len(list_cart_items) > 1
                         else "erase_cart"
                     ),
@@ -137,6 +102,7 @@ async def init_cart(list_cart_items):
                 text="🗑️ Очистить корзину 🗑️", callback_data="erase_cart"
             )
         )
+        keyboard.row(InlineKeyboardButton(text=f"", callback_data="cart_amount"))
     keyboard.row(
         InlineKeyboardButton(text=" ⬅️ Назад в каталог  ", callback_data="catalog"),
         InlineKeyboardButton(text="⏪ Главное меню ", callback_data="main menu"),
