@@ -14,9 +14,9 @@ from database.sqlite_db import Product
 async def main_menu():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
-        InlineKeyboardButton(text="Каталог", callback_data="catalog"),
-        InlineKeyboardButton(text="Корзина", callback_data="cart"),
-        InlineKeyboardButton(text="Контакты", callback_data="contacts"),
+        InlineKeyboardButton(text="📋 Каталог", callback_data="catalog"),
+        InlineKeyboardButton(text="🛒 Корзина", callback_data="cart"),
+        InlineKeyboardButton(text="📞 Контакты", callback_data="contacts"),
     )
     return keyboard.adjust(1, 2).as_markup()
 
@@ -24,9 +24,9 @@ async def main_menu():
 async def catalog():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
-        InlineKeyboardButton(text="🍕 Пиццы", callback_data="pizzas"),
-        InlineKeyboardButton(text="🍟 Закуски", callback_data="snacks"),
-        InlineKeyboardButton(text="🥤 Напитки", callback_data="drinks"),
+        InlineKeyboardButton(text="🍕 Пиццы", callback_data="pizza"),
+        InlineKeyboardButton(text="🍟 Закуски", callback_data="snack"),
+        InlineKeyboardButton(text="🥤 Напитки", callback_data="drink"),
         InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="main menu"),
     )
     return keyboard.adjust(1, 2, 1).as_markup()
@@ -37,7 +37,7 @@ async def init_category_menu(products: List[Product], category):
     for product in products:
         name_btn = InlineKeyboardButton(
             text=f"{product.emoji} {product.name}",
-            callback_data=f"info_{product.callback_name}",
+            callback_data=f"info_{product.category}_{product.callback_name}",
         )
         small_size_btn = InlineKeyboardButton(
             text=f"{product.small_size_text} {product.price_small} BYN",
@@ -133,19 +133,19 @@ async def create_product():
         InlineKeyboardButton(text="🍕 Пицца", callback_data="product_create_pizza"),
         InlineKeyboardButton(text="🍟 Закуска", callback_data="product_create_snack"),
         InlineKeyboardButton(text="🥤 Напиток", callback_data="product_create_drink"),
+        InlineKeyboardButton(text="🍰 Тортик", callback_data="product_create_cake"),
         InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"),
     )
     return keyboard.adjust(1).as_markup()
 
 
-async def delete_product():
+async def delete_product(products:List[Product]):
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(
-        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
-        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
-        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
-        InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
-    )
+    for product in products:
+        keyboard.add(
+            InlineKeyboardButton(text=f"{product.emoji} {product.name}", callback_data=f"product_delete_{product.callback_name}")
+        )
+    keyboard.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"))
     return keyboard.adjust(1).as_markup()
 
 

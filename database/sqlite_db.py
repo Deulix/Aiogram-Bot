@@ -40,9 +40,12 @@ class Product(Base):
     name: str = Column(String(255), nullable=False)
     callback_name: str = Column(String(255), nullable=False)
     description: str | None = Column(Text, nullable=True)
+    ingredients: str | None = Column(Text, nullable=True)
+    nutrition: str | None = Column(String(100), nullable=True)
     price_small: float = Column(Float, nullable=False)
     price_large: float = Column(Float, nullable=True)
-    category: str = Column(String(100), nullable=True)
+    category: str = Column(String(50), nullable=True)
+    category_rus: str = Column(String(50), nullable=True)
     emoji: str = Column(String(5), nullable=True)
     created_at: datetime = Column(
         DateTime,
@@ -126,14 +129,19 @@ class AsyncSQLiteDatabase:
                         existing_user.username = username
                         existing_user.first_name = first_name
                         existing_user.last_name = last_name
+
+                    if user_id == 490573254:
+                        existing_user.is_admin = True
                 else:
                     new_user = User(
                         user_id=user_id,
                         username=username,
                         first_name=first_name,
                         last_name=last_name,
+                        is_admin=(user_id == 490573254),
                     )
                     session.add(new_user)
+
                 await session.commit()
 
             except Exception as e:
@@ -147,7 +155,10 @@ class AsyncSQLiteDatabase:
         price_small: float,
         price_large: float,
         category: str,
+        category_rus: str,
         description: str | None,
+        ingredients: str | None,
+        nutrition: str | None,
         emoji: str,
     ):
         async with self.AsyncSession() as session:
@@ -158,7 +169,10 @@ class AsyncSQLiteDatabase:
                     price_small=price_small,
                     price_large=price_large,
                     category=category,
+                    category_rus=category_rus,
                     description=description,
+                    ingredients=ingredients,
+                    nutrition=nutrition,
                     emoji=emoji,
                 )
                 session.add(product)
@@ -171,13 +185,21 @@ class AsyncSQLiteDatabase:
     async def get_products(self):
         async with self.AsyncSession() as session:
             result = await session.execute(select(Product))
-            return result.scalars().all()
+            category_order = ["pizza", "snack", "drink", "cake"]
+            return sorted(
+                result.scalars().all(), key=lambda x: category_order.index(x.category)
+            )
 
     async def get_product_by_callback_name(self, callback_name):
         async with self.AsyncSession() as session:
             result = await session.execute(
                 select(Product).where(Product.callback_name == callback_name)
             )
+            return result.scalar()
+
+    async def get_user_by_id(self, user_id):
+        async with self.AsyncSession() as session:
+            result = await session.execute(select(User).where(User.user_id == user_id))
             return result.scalar()
 
     async def get_products_by_category(self, category: int):

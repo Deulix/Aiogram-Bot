@@ -48,28 +48,28 @@ async def handle_photo(message: Message):
     await message.reply(message.photo[-1].file_id)
 
 
-@router.callback_query(F.data == "catalog")
-async def menu_catalog(callback: CallbackQuery):
-    await callback.message.edit_text(
-        f"Для продолжения заказа выбери пункт меню:",
-        reply_markup=await kb.catalog(),
-    )
-
-
-@router.callback_query(F.data.in_(["pizzas", "snacks", "drinks"]))
+@router.callback_query(F.data.in_(["catalog", "pizza", "snack", "drink"]))
 async def category_menu(callback: CallbackQuery, db: AsyncSQLiteDatabase):
-    category = callback.data[:-1]
-    products = await db.get_products_by_category(category)
-    if category == "pizza":
-        await callback.message.edit_text(
-            f"Для продолжения заказа выбери пункт меню ниже.\n\nИнформация о размерах пицц:\nСтандартная: 500-600 грамм, 25 сантиметров\nБольшая: 800-900 грамм, 35 сантиметров",
-            reply_markup=await kb.init_category_menu(products, category),
-        )
-    else:
-        await callback.message.edit_text(
-            f"Для продолжения заказа выбери пункт меню:",
-            reply_markup=await kb.init_category_menu(products, category),
-        )
+    category = callback.data
+
+    products:List[Product] = await db.get_products_by_category(category)
+    if category == "snack":
+        products.extend(await db.get_products_by_category("cake"))
+    await callback.message.edit_text(
+        (
+            (
+                "Стандарт: ~ 650 грамм, 29 см\nБольшая: ~ 850 грамм, 36 см"
+                if category == "pizza"
+                else ""
+            )
+            + "\nДля продолжения заказа выбери пункт меню:"
+        ),
+        reply_markup=(
+            await kb.catalog()
+            if callback.data == "catalog"
+            else await kb.init_category_menu(products, category)
+        ),
+    )
 
 
 class Cart:
@@ -86,59 +86,66 @@ class Cart:
     async def add(self, price: float):
         await self.redis.incrbyfloat(self.amount_key, price)
         await self.redis.expire(self.amount_key, 3600 * 12)
+        await self.redis.expire(self.cart_key, 3600 * 12)
 
     async def sub(self, price: float):
         await self.redis.incrbyfloat(self.amount_key, -price)
         await self.redis.expire(self.amount_key, 3600 * 12)
-
-    async def delete(self, product: Product, size):
-        amount = await self.redis.hget(
-            self.cart_key, f"{product.category}_{product.callback_name}_{size}"
-        )
-        await self.redis.incrbyfloat(
-            self.amount_key, -product.get_current_price(size) * int(amount)
-        )
-        await self.redis.expire(self.amount_key, 3600 * 12)
+        await self.redis.expire(self.cart_key, 3600 * 12)
 
     async def clear(self):
         await self.redis.delete(self.cart_key)
         await self.redis.delete(self.amount_key)
 
+    async def delete_product(self, full_callback_name: str):
+        await self.redis.hdel(self.cart_key, full_callback_name)
+
+    async def increase(self, full_callback_name: str):
+        await self.redis.hincrby(self.cart_key, full_callback_name, 1)
+
+    async def decrease(self, full_callback_name: str):
+        await self.redis.hincrby(self.cart_key, full_callback_name, -1)
+
+
+async def getall(
+    callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
+) -> tuple[Product, str, Cart, str, int]:
+    callback_name = callback.data.split("_")[-2]
+    product = await db.get_product_by_callback_name(callback_name)
+    size = callback.data.split("_")[-1]
+    cart_key = f"cart:{callback.from_user.id}"
+    cart = Cart(user_id=callback.from_user.id, redis=redis)
+    full_callback_name = f"{product.category}_{callback_name}_{size}"
+    quantity = await redis.hget(cart_key, full_callback_name) or 0
+
+    return (product, size, cart, full_callback_name, int(quantity))
+
 
 @router.callback_query(F.data.startswith("add_"))
 async def add_to_cart(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase):
-    _, category, callback_name, size = callback.data.split("_")
-
-    user_id = callback.from_user.id
-    cart_key = f"cart:{user_id}"
-    product_redis_key = f"{category}_{callback_name}_{size}"
-
-    await redis.hincrby(cart_key, product_redis_key, 1)
-    await redis.expire(cart_key, 3600 * 12)
-    quantity = await redis.hget(cart_key, product_redis_key)
-    products = await db.get_products_by_category(category)
-    product = await db.get_product_by_callback_name(callback_name)
-    reply_markup = kb.init_category_menu(products, category)
-    if category == "pizza":
-        text = f"Пицца {product.name} {("большая 35 см" if size == "large" else "стандартная 25 см")} ({quantity} шт) добавлена в корзину\n\nИнформация о размерах пицц:\nСтандартная: 500-600 грамм, 25 сантиметров\nБольшая: 800-900 грамм, 35 сантиметров"
-    elif category == "snack":
-        text = f"Закуска {product.name} {product.get_current_size_text(size)} ({quantity} шт) добавлена в корзину"
-    elif category == "drink":
-        text = f"Напиток {product.name} {"1 литр" if size == "large" else "0,5 литра"} ({quantity} шт) добавлен в корзину"
-    logger.info(
-        f"***User {user_id} added {product.name} to cart with size {size} and quantity {quantity}***"
+    (product, size, cart, full_callback_name, quantity) = await getall(
+        callback=callback, redis=redis, db=db
     )
-    cart = Cart(user_id=user_id, redis=redis)
+
+    await cart.increase(full_callback_name)
+    quantity += 1
+    products = await db.get_products_by_category(product.category)
+    text = f"{product.category_rus.capitalize()} {product.name} {product.large_size_text if size == "large" else product.small_size_text} ({quantity} шт) добавлен(а) в корзину"
+    
+    # logger.info(
+    #     f"***User {user_id} added {product.name} to cart with size {size} and quantity {quantity}***"
+    # )
     await cart.add(product.get_current_price(size))
-    cart_text = f"\n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN"
-    await callback.message.edit_text(text + cart_text, reply_markup=await reply_markup)
+    await callback.message.edit_text(
+        f"{text} \n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN",
+        reply_markup=await kb.init_category_menu(products, product.category),
+    )
 
 
-async def get_formatted_cart(
-    user_id: int, redis: Redis, db: AsyncSQLiteDatabase
-) -> List:
+async def get_cart(user_id: int, redis: Redis, db: AsyncSQLiteDatabase) -> List:
     cart_key = f"cart:{user_id}"
     dict_cart_items = await redis.hgetall(cart_key)
+    print(dict_cart_items)
     list_cart_items = []
     for item_key, quantity in dict_cart_items.items():
         callback_name = item_key.split("_")[1]
@@ -151,47 +158,26 @@ async def get_formatted_cart(
 
 @router.callback_query(F.data == "cart")
 async def menu_cart(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase):
-    sorted_list_cart_items = await get_formatted_cart(callback.from_user.id, redis, db)
+    sorted_list_cart_items = await get_cart(callback.from_user.id, redis, db)
     cart = Cart(user_id=callback.from_user.id, redis=redis)
     await callback.message.edit_text(
-        f"{callback.from_user.first_name}, {f"вот твоя корзина:\n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN" if sorted_list_cart_items else "твоя корзина пуста"}",
+        (
+            f"Общая стоимость корзины: {await cart.get_current_amount()} BYN"
+            if sorted_list_cart_items
+            else "Корзина пуста"
+        ),
         reply_markup=await kb.init_cart(sorted_list_cart_items),
-    )
-
-
-async def getall(
-    callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
-) -> tuple[Product, str, str, float, str, Cart, float]:
-    callback_name = callback.data.split("_")[-2]
-    product = await db.get_product_by_callback_name(callback_name)
-    size = callback.data.split("_")[-1]
-    current_price = product.get_current_price(size)
-    cart_key = f"cart:{callback.from_user.id}"
-    cart = Cart(user_id=callback.from_user.id, redis=redis)
-    
-    return (
-        product,
-        callback_name,
-        size,
-        current_price,
-        cart_key,
-        cart,
     )
 
 
 @router.callback_query(F.data.startswith("plus_"))
 async def plus_quantity(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase):
-    (
-        product,
-        callback_name,
-        size,
-        current_price,
-        cart_key,
-        cart,
-    ) = await getall(callback=callback, redis=redis, db=db)
-    await redis.hincrby(cart_key, callback.data[5:], 1)
+    (product, size, cart, full_callback_name, quantity) = await getall(
+        callback=callback, redis=redis, db=db
+    )
+    await cart.increase(full_callback_name)
     await cart.add(product.get_current_price(size))
-    sorted_list_cart_items = await get_formatted_cart(callback.from_user.id, redis, db)
+    sorted_list_cart_items = await get_cart(callback.from_user.id, redis, db)
     await callback.message.edit_text(
         f"{callback.from_user.first_name}, вот твоя корзина:\n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN",
         reply_markup=await kb.init_cart(sorted_list_cart_items),
@@ -202,22 +188,15 @@ async def plus_quantity(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDa
 async def minus_quantity(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
-    (
-        product,
-        callback_name,
-        size,
-        current_price,
-        cart_key,
-        cart,
-    ) = await getall(callback=callback, redis=redis, db=db)
-    quantity = await redis.hget(cart_key, callback.data[6:])
+    (product, size, cart, full_callback_name, quantity) = await getall(
+        callback=callback, redis=redis, db=db
+    )
     if int(quantity) > 1:
-        await redis.hincrby(cart_key, callback.data[6:], -1)
+        await cart.decrease(full_callback_name)
     else:
-        await redis.hdel(cart_key, callback.data[6:])
-        await cart.delete(product, size)
+        await cart.delete_product(full_callback_name)
     await cart.sub(product.get_current_price(size))
-    sorted_list_cart_items = await get_formatted_cart(callback.from_user.id, redis, db)
+    sorted_list_cart_items = await get_cart(callback.from_user.id, redis, db)
     await callback.message.edit_text(
         f"{callback.from_user.first_name}, вот твоя корзина:\n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN",
         reply_markup=await kb.init_cart(sorted_list_cart_items),
@@ -228,17 +207,12 @@ async def minus_quantity(
 async def delete_from_cart(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
-    (
-        product,
-        callback_name,
-        size,
-        current_price,
-        cart_key,
-        cart,
-    ) = await getall(callback=callback, redis=redis, db=db)
-    await redis.hdel(cart_key, callback.data[4:])
-    sorted_list_cart_items = await get_formatted_cart(callback.from_user.id, redis, db)
-    await cart.delete()
+    (product, size, cart, full_callback_name, quantity) = await getall(
+        callback=callback, redis=redis, db=db
+    )
+    await cart.delete_product(full_callback_name)
+    sorted_list_cart_items = await get_cart(callback.from_user.id, redis, db)
+    await cart.sub(product.get_current_price(size) * quantity)
     await callback.message.edit_text(
         f"{callback.from_user.first_name}, вот твоя корзина:\n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN",
         reply_markup=await kb.init_cart(sorted_list_cart_items),
@@ -248,11 +222,11 @@ async def delete_from_cart(
 @router.callback_query(F.data == "erase_cart")
 async def erase_cart(callback: CallbackQuery, redis: Redis):
     cart = Cart(user_id=callback.from_user.id, redis=redis)
-    await cart.clear()
     await callback.message.edit_text(
         f"Корзина была очищена.",
         reply_markup=await kb.main_menu(),
     )
+    await cart.clear()
 
 
 @router.callback_query(F.data == "contacts")
@@ -265,8 +239,11 @@ async def menu_contacts(callback: CallbackQuery):
 
 @router.message(Command("admin"))
 @router.callback_query(F.data == "admin")
-async def handle_admin(event: Message | CallbackQuery, state: FSMContext):
-    if event.from_user.id == 490573254:
+async def handle_admin(
+    event: Message | CallbackQuery, state: FSMContext, db: AsyncSQLiteDatabase
+):
+    user = await db.get_user_by_id(event.from_user.id)
+    if user.is_admin:
         await state.clear()
         try:
             if isinstance(event, Message):
@@ -290,21 +267,30 @@ async def handle_admin(event: Message | CallbackQuery, state: FSMContext):
 
 @router.message(Command("db"))
 async def handle_redis(message: Message, redis: Redis, db: AsyncSQLiteDatabase):
-    await redis.set("REDIS_STATUS", "OK")
-    redis_result = await redis.get("REDIS_STATUS")
-    sqlite_result = await db.check_connection()
-    await message.answer(
-        f"REDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
-    )
-    redis.delete("REDIS_STATUS")
+    user = await db.get_user_by_id(message.from_user.id)
+    if user.is_admin:
+        await redis.set("REDIS_STATUS", "OK")
+        redis_result = await redis.get("REDIS_STATUS")
+        sqlite_result = await db.check_connection()
+        await message.answer(
+            f"REDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
+        )
+        redis.delete("REDIS_STATUS")
+    else:
+        await message.answer(
+            f"Я умею отвечать только на меню. Выбери пункт ниже:",
+            reply_markup=await kb.main_menu(),
+        )
 
 
 class AddProduct(StatesGroup):
     choose_type = State()
     add_name = State()
     add_price_small_size = State()
-    add_price_big_size = State()
+    add_price_large_size = State()
     add_description = State()
+    add_ingredients = State()
+    add_nutrition = State()
 
 
 @router.callback_query(F.data == "product_create")
@@ -351,17 +337,17 @@ async def product_create_add_name(message: Message, state: FSMContext):
 
 
 @router.message(AddProduct.add_price_small_size)
-async def product_create_add_price(message: Message, state: FSMContext):
+async def product_create_add_price_small(message: Message, state: FSMContext):
     await state.update_data(price_small=message.text.replace(",", "."))
-    await state.set_state(AddProduct.add_price_big_size)
+    await state.set_state(AddProduct.add_price_large_size)
     await message.answer(
         f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")} BYN). Добавьте цену для большого размера (0 если такого размера не будет):",
         reply_markup=await kb.cancel_creation(),
     )
 
 
-@router.message(AddProduct.add_price_big_size)
-async def product_create_add_price(message: Message, state: FSMContext):
+@router.message(AddProduct.add_price_large_size)
+async def product_create_add_price_large(message: Message, state: FSMContext):
     await state.update_data(
         price_large=message.text.replace(",", ".") if message.text != "0" else None
     )
@@ -373,10 +359,34 @@ async def product_create_add_price(message: Message, state: FSMContext):
 
 
 @router.message(AddProduct.add_description)
-async def product_create_add_description(
+async def product_create_add_description(message: Message, state: FSMContext):
+    await state.update_data(
+        description=message.text.capitalize() if message.text != "0" else None
+    )
+    await state.set_state(AddProduct.add_ingredients)
+    await message.answer(
+        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN). Добавьте состав (0 если без состава):",
+        reply_markup=await kb.cancel_creation(),
+    )
+
+
+@router.message(AddProduct.add_ingredients)
+async def product_create_add_ingredients(message: Message, state: FSMContext):
+    await state.update_data(
+        ingredients=message.text.capitalize() if message.text != "0" else None
+    )
+    await state.set_state(AddProduct.add_nutrition)
+    await message.answer(
+        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN). Добавьте КБЖУ (0 если без КБЖУ):",
+        reply_markup=await kb.cancel_creation(),
+    )
+
+
+@router.message(AddProduct.add_nutrition)
+async def product_create_add_nutrition(
     message: Message, db: AsyncSQLiteDatabase, state: FSMContext
 ):
-    await state.update_data(description=message.text if message.text != "0" else None)
+    await state.update_data(nutrition=message.text if message.text != "0" else None)
     data = await state.get_data()
     category = data["category"]
     category_rus = data["category_rus"]
@@ -385,6 +395,8 @@ async def product_create_add_description(
     price_small = data["price_small"]
     price_large = data["price_large"]
     description = data["description"]
+    ingredients = data["ingredients"]
+    nutrition = data["nutrition"]
     emoji = data["emoji"]
     await state.clear()
     await db.add_product(
@@ -393,21 +405,35 @@ async def product_create_add_description(
         price_small=price_small,
         price_large=price_large,
         category=category,
+        category_rus=category_rus,
         description=description,
+        ingredients=ingredients,
+        nutrition=nutrition,
         emoji=emoji,
     )
 
     await message.answer(
-        f"СОЗДАН ТОВАР:\nКатегория: {category_rus}\nEmoji: {emoji}\nНазвание: {name}\nCallback: {callback_name}\nКатегория в DB: {category}\nЦена: {price_small}{f" / {price_large} BYN" if price_large else " BYN (один размер)"}\nОписание: {description or "---"}",
+        f"СОЗДАН ТОВАР\nКатегория: {category_rus}\nEmoji: {emoji}\nНазвание: {name}\nCallback: {callback_name}\nКатегория в DB: {category}\nЦена: {price_small}{f" / {price_large} BYN" if price_large else " BYN (один размер)"}\nОписание: {f"\n{description}"  if description else "---"}\nСостав:{f"\n{ingredients}"  if ingredients else "---"}\nКБЖУ: {f"\n{nutrition}" if nutrition else "---"}",
         reply_markup=await kb.admin(),
     )
 
 
 @router.callback_query(F.data == "product_delete")
-async def product_delete(callback: CallbackQuery):
+async def product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+    products = await db.get_products()
     await callback.message.edit_text(
         f"УДАЛЕНИЕ ТОВАРА. Выберите товар из списка для удаления:",
-        reply_markup=await kb.delete_product(),
+        reply_markup=await kb.delete_product(products),
+    )
+
+
+@router.callback_query(F.startswith("product_delete_"))
+async def product_delete_specified(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+    products = await db.get_products()
+    product = await db.get_product_by_callback_name(callback.data.split("_")[-1])
+    await callback.message.edit_text(
+        f"УДАЛЕНИЕ ТОВАРА. Вы уверены, что хотите удалить {product.name}:",
+        reply_markup=await kb.delete_product(products),
     )
 
 
@@ -419,4 +445,14 @@ async def handle_answer(message: Message):
     await message.answer(
         f"Я умею отвечать только на меню. Выбери пункт ниже:",
         reply_markup=await kb.main_menu(),
+    )
+
+
+@router.callback_query(F.data.startswith("info_"))
+async def product_info(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+    callback_name = callback.data.split("_")[2]
+    product = await db.get_product_by_callback_name(callback_name)
+    await callback.answer(
+        f"{product.category_rus.capitalize()} {product.name}\n{f"\n{product.description}\n" if product.description else ""}{f"\nСостав: \n{product.ingredients}\n" if product.ingredients else ""}{f"\n{product.nutrition}" if product.nutrition else ""}",
+        show_alert=True,
     )
