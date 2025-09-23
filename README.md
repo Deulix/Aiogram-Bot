@@ -10,6 +10,7 @@
 git clone https://github.com/Deulix/Aiogram-Bot.git
 cd Aiogram-Bot
 ```
+
 2. **Настройте переменные окружения:**
 ```bash
 cp .env.example .env
@@ -19,6 +20,8 @@ cp .env.example .env
 ```bash
 docker-compose up -d
 ```
+
+**📁 Структура проекта**
 Aiogram-Bot/
 ├── app/
 │   ├── handlers/          # 📋 Обработчики сообщений
