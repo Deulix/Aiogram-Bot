@@ -25,6 +25,15 @@ cp .env.example .env
 docker-compose up -d
 ```
 
+
+## ⚙️ Конфигурация
+Перед запуском заполните .env файл:
+```python
+BOT_TOKEN="your_bot_token_here" # ваш токен от @botfather в telegram
+ADMIN_ID="your_telegram_id" # ваш id в telegram
+REDIS_PORT=6379 # стандартный порт redis
+REDIS_URL="redis://redis:6379/0" # URL вашего Redis
+```
 ## 📁 Структура проекта
 ```bash
 Aiogram-Bot/
@@ -40,15 +49,6 @@ Aiogram-Bot/
 ├── Dockerfile             # Образ Docker
 ├── requirements.txt       # Зависимости Python
 └── .env.example           # Пример переменных окружения
-```
-
-## ⚙️ Конфигурация
-Перед запуском заполните .env файл:
-```
-BOT_TOKEN=your_bot_token_here # ваш токен от @botfather в telegram
-ADMIN_ID=your_telegram_id # ваш id в telegram
-REDIS_PORT=6379 # стандартный порт redis
-REDIS_URL=redis://redis:6379/0 # URL вашего Redis
 ```
 
 ## 🛠️ Технологии
