@@ -55,6 +55,7 @@ REDIS_URL=redis://redis:6379/0 # URL вашего Redis
 ![](https://img.shields.io/badge/aiogram_3.13.5-blue?logo=python&logoColor=yellow) - основной язык
 
 ![](https://img.shields.io/badge/aiogram_3.21.0-blue?logo=telegram&logoColor=white) - современный фреймворк для Telegram ботов
+
 ![](https://img.shields.io/badge/SQLAlchemy_2.0.43-orange) - работа с базой данных
 
 ![](https://img.shields.io/badge/Redis_7-red) - для хранения корзины клиента
