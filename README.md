@@ -52,7 +52,7 @@ REDIS_URL=redis://redis:6379/0 # URL вашего Redis
 ```
 
 ## 🛠️ Технологии
-![](https://img.shields.io/badge/aiogram_3.13.5-blue?logo=python&logoColor=yellow) - основной язык
+![](https://img.shields.io/badge/python_3.13.5-blue?logo=python&logoColor=yellow) - основной язык
 
 ![](https://img.shields.io/badge/aiogram_3.21.0-blue?logo=telegram&logoColor=white) - современный фреймворк для Telegram ботов
 
