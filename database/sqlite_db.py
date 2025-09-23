@@ -1,5 +1,5 @@
 from datetime import datetime
-
+import os
 from sqlalchemy import (
     Boolean,
     Column,
@@ -130,7 +130,7 @@ class AsyncSQLiteDatabase:
                         existing_user.first_name = first_name
                         existing_user.last_name = last_name
 
-                    if user_id == 490573254:
+                    if user_id == os.getenv("ADMIN_ID"):
                         existing_user.is_admin = True
                 else:
                     new_user = User(
@@ -138,7 +138,7 @@ class AsyncSQLiteDatabase:
                         username=username,
                         first_name=first_name,
                         last_name=last_name,
-                        is_admin=(user_id == 490573254),
+                        is_admin=(user_id == os.getenv("ADMIN_ID")),
                     )
                     session.add(new_user)
 

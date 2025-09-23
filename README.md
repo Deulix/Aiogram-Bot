@@ -1,6 +1,5 @@
-# 🤖 Aiogram Bot Template
-
-Современный шаблон Telegram бота на Aiogram 3.x с готовой структурой для быстрого старта вашего проекта!
+# 🤖 Aiogram Bot
+Проект Telegram бота на Aiogram 3.x для пиццерии
 
 ## 🚀 Быстрый старт
 
@@ -10,11 +9,16 @@
 ```bash
 git clone https://github.com/Deulix/Aiogram-Bot.git
 cd Aiogram-Bot
-
+```
+2. **Настройте переменные окружения:**
+```bash
 cp .env.example .env
+```
 
+3. **Запустите через Docker Compose:**
+```bash
 docker-compose up -d
-
+```
 Aiogram-Bot/
 ├── app/
 │   ├── handlers/          # 📋 Обработчики сообщений
@@ -27,7 +31,7 @@ Aiogram-Bot/
 
 BOT_TOKEN=your_bot_token_here
 ADMIN_ID=your_telegram_id
-DATABASE_URL=sqlite+aiosqlite:///database.db
+DATABASE_URL=sqlite+aiosqlite:///shop.db
 REDIS_URL=redis://redis:6379/0
 
 🛠️ Технологии
