@@ -14,7 +14,7 @@ cd Aiogram-Bot
 ```bash
 cp .env.example .env
 ```
-
+Переименует env
 3. **Запустите через Docker Compose:**
 ```bash
 docker-compose up -d
