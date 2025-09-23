@@ -21,16 +21,23 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-**📁 Структура проекта**
+## 📁 Структура проекта
+
+```bash
 Aiogram-Bot/
 ├── app/
-│   ├── handlers/          # 📋 Обработчики сообщений
-│   ├── keyboards/         # ⌨️ Инлайн-клавиатуры   
+│   ├── handlers/          # Обработчики сообщений
+│   ├── keyboards/         # Инлайн-клавиатуры   
 │   └── __init__.py
-├── docker-compose.yml    # 🐳 Docker конфигурация
-├── Dockerfile           # 🐳 Образ Docker
-├── requirements.txt     # 📦 Зависимости Python
-└── .env.example        # 🔧 Пример переменных окружения
+├── database/
+│   ├── redis_db.py        # Redis DB
+│   ├── shop.db            # Volume базы данных sqlite  
+│   └── sqlite_db.py       # Async SQLite DB
+├── docker-compose.yml     # Docker конфигурация
+├── Dockerfile             # Образ Docker
+├── requirements.txt       # Зависимости Python
+└── .env.example           # Пример переменных окружения
+```
 
 BOT_TOKEN=your_bot_token_here
 ADMIN_ID=your_telegram_id
