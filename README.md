@@ -52,7 +52,7 @@ REDIS_URL=redis://redis:6379/0 # URL вашего Redis
 ```
 
 ## 🛠️ Технологии
-(https://img.shields.io/badge/aiogram_3.21.0-3776AB?logo=telegram&logoColor=white)
+![](https://img.shields.io/badge/aiogram_3.21.0-3776AB?logo=telegram&logoColor=white)
 Python 3.13.5 - основной язык
 
 Aiogram 3.21.0 - современный фреймворк для Telegram ботов
