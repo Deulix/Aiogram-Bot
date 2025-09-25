@@ -123,7 +123,6 @@ class AsyncSQLiteDatabase:
                     first_name=first_name,
                     last_name=last_name,
                     is_admin=(user_id == int(os.getenv("ADMIN_ID"))),
-                    
                 )
 
                 session.add(new_user)
@@ -135,10 +134,13 @@ class AsyncSQLiteDatabase:
         return new_user
 
     from aiogram.types import User as TgUser
-    async def update_user(self, tg_user:TgUser):
-        
+
+    async def update_user(self, tg_user: TgUser):
+
         async with self.AsyncSession() as session:
-            result = await session.execute(select(User).where(User.user_id == tg_user.id))
+            result = await session.execute(
+                select(User).where(User.user_id == tg_user.id)
+            )
             db_user = result.scalar_one_or_none()
             try:
                 if (
@@ -159,7 +161,7 @@ class AsyncSQLiteDatabase:
             except Exception as e:
                 await session.rollback()
                 print(f"Error adding user: {e}")
-
+            return db_user
 
     async def add_product(
         self,
