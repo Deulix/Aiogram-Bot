@@ -11,6 +11,7 @@ from sqlalchemy import (
     func,
     select,
     text,
+    delete,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -116,37 +117,49 @@ class AsyncSQLiteDatabase:
     ):
         async with self.AsyncSession() as session:
             try:
-                script = select(User).where(User.user_id == user_id)
-                result = await session.execute(script)
-                existing_user = result.scalar_one_or_none()
-                if existing_user:
-                    if (
-                        existing_user.username != username
-                        or existing_user.first_name != first_name
-                        or existing_user.last_name != last_name
-                    ):
+                new_user = User(
+                    user_id=user_id,
+                    username=username,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_admin=(user_id == int(os.getenv("ADMIN_ID"))),
+                    
+                )
 
-                        existing_user.username = username
-                        existing_user.first_name = first_name
-                        existing_user.last_name = last_name
-
-                    if user_id == os.getenv("ADMIN_ID"):
-                        existing_user.is_admin = True
-                else:
-                    new_user = User(
-                        user_id=user_id,
-                        username=username,
-                        first_name=first_name,
-                        last_name=last_name,
-                        is_admin=(user_id == os.getenv("ADMIN_ID")),
-                    )
-                    session.add(new_user)
-
+                session.add(new_user)
                 await session.commit()
 
             except Exception as e:
                 await session.rollback()
                 print(f"Error adding user: {e}")
+        return new_user
+
+    from aiogram.types import User as TgUser
+    async def update_user(self, tg_user:TgUser):
+        
+        async with self.AsyncSession() as session:
+            result = await session.execute(select(User).where(User.user_id == tg_user.id))
+            db_user = result.scalar_one_or_none()
+            try:
+                if (
+                    db_user.username != tg_user.username
+                    or db_user.first_name != tg_user.first_name
+                    or db_user.last_name != tg_user.last_name
+                ):
+
+                    db_user.username = tg_user.username
+                    db_user.first_name = tg_user.first_name
+                    db_user.last_name = tg_user.last_name
+
+                if tg_user.id == int(os.getenv("ADMIN_ID")):
+                    db_user.is_admin = True
+
+                session.add(db_user)
+                await session.commit()
+            except Exception as e:
+                await session.rollback()
+                print(f"Error adding user: {e}")
+
 
     async def add_product(
         self,
@@ -217,6 +230,15 @@ class AsyncSQLiteDatabase:
         except Exception as e:
             print(f"Ошибка подключения к БД: {e}")
             return False
+
+    async def delete_product(self, callback_name):
+        async with self.AsyncSession() as session:
+            result = await session.execute(
+                select(Product).where(Product.callback_name == callback_name)
+            )
+            product = result.scalar_one_or_none()
+            await session.delete(product)
+            await session.commit()
 
 
 async def init_async_sqlite():

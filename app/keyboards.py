@@ -139,19 +139,35 @@ async def create_product():
     return keyboard.adjust(1).as_markup()
 
 
-async def delete_product(products:List[Product]):
-    keyboard = InlineKeyboardBuilder()
-    for product in products:
-        keyboard.add(
-            InlineKeyboardButton(text=f"{product.emoji} {product.name}", callback_data=f"product_delete_{product.callback_name}")
-        )
-    keyboard.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"))
-    return keyboard.adjust(1).as_markup()
-
-
 async def cancel_creation():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
         InlineKeyboardButton(text="🛑 Отмена создания", callback_data="admin"),
     )
     return keyboard.adjust().as_markup()
+
+
+async def product_delete(products: List[Product]):
+    keyboard = InlineKeyboardBuilder()
+    for product in products:
+        keyboard.add(
+            InlineKeyboardButton(
+                text=f"{product.emoji} {product.name}",
+                callback_data=f"product_delete_{product.callback_name}",
+            )
+        )
+    keyboard.adjust(2)
+    keyboard.row(InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"))
+    return keyboard.as_markup()
+
+
+async def product_confirmed_delete(callback_name):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(
+        InlineKeyboardButton(
+            text="❌ УДАЛИТЬ ❌", callback_data=f"product_confirmed_delete_{callback_name}"
+        ),
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="product_delete"),
+    )
+
+    return keyboard.as_markup()

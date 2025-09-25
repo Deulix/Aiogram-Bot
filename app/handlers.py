@@ -21,38 +21,50 @@ logger = logging.getLogger(__name__)
 @router.message(CommandStart())
 async def cmd_start(message: Message, db: AsyncSQLiteDatabase, state: FSMContext):
     await state.clear()
-    user = message.from_user
-    await db.add_user(
-        user_id=user.id,
-        username=user.username,
-        first_name=user.first_name,
-        last_name=user.last_name,
-    )
+    tg_user = message.from_user
+    if not (db_user := await db.get_user_by_id(message.from_user.id)):
+        db_user = await db.add_user(
+            user_id=tg_user.id,
+            username=tg_user.username,
+            first_name=tg_user.first_name,
+            last_name=tg_user.last_name,
+        )
+    else:
+        db_user = await db.update_user(tg_user)
+
+    adm_txt = "/admin\n/start\n" if db_user.is_admin else ""
+
     await message.answer(
-        f"Привет, {user.first_name}! Выбери пункт меню:",
+        f"{adm_txt}Привет, {db_user.first_name}! Выбери пункт меню:",
         reply_markup=await kb.main_menu(),
     )
 
 
 @router.callback_query(F.data == "main menu")
-async def menu_main(callback: CallbackQuery, state: FSMContext):
+async def cmd_main_menu(
+    callback: CallbackQuery, state: FSMContext, db: AsyncSQLiteDatabase
+):
     await state.clear()
+    tg_user = callback.from_user
+    db_user = await db.get_user_by_id(tg_user.id)
+    await db.update_user(tg_user)
+    adm_txt = "/admin\n/start\n" if db_user.is_admin else ""
     await callback.message.edit_text(
-        f"Привет, {callback.from_user.first_name}! Выбери пункт меню:",
+        f"{adm_txt}Привет, {db_user.first_name}! Выбери пункт меню:",
         reply_markup=await kb.main_menu(),
     )
 
 
 @router.message(F.photo)
-async def handle_photo(message: Message):
+async def cmd_handle_photo(message: Message):
     await message.reply(message.photo[-1].file_id)
 
 
 @router.callback_query(F.data.in_(["catalog", "pizza", "snack", "drink"]))
-async def category_menu(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+async def cmd_category_menu(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     category = callback.data
 
-    products:List[Product] = await db.get_products_by_category(category)
+    products: List[Product] = await db.get_products_by_category(category)
     if category == "snack":
         products.extend(await db.get_products_by_category("cake"))
     await callback.message.edit_text(
@@ -122,7 +134,9 @@ async def getall(
 
 
 @router.callback_query(F.data.startswith("add_"))
-async def add_to_cart(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase):
+async def cmd_add_to_cart(
+    callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
+):
     (product, size, cart, full_callback_name, quantity) = await getall(
         callback=callback, redis=redis, db=db
     )
@@ -131,7 +145,7 @@ async def add_to_cart(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteData
     quantity += 1
     products = await db.get_products_by_category(product.category)
     text = f"{product.category_rus.capitalize()} {product.name} {product.large_size_text if size == "large" else product.small_size_text} ({quantity} шт) добавлен(а) в корзину"
-    
+
     # logger.info(
     #     f"***User {user_id} added {product.name} to cart with size {size} and quantity {quantity}***"
     # )
@@ -157,7 +171,7 @@ async def get_cart(user_id: int, redis: Redis, db: AsyncSQLiteDatabase) -> List:
 
 
 @router.callback_query(F.data == "cart")
-async def menu_cart(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase):
+async def cmd_cart_menu(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase):
     sorted_list_cart_items = await get_cart(callback.from_user.id, redis, db)
     cart = Cart(user_id=callback.from_user.id, redis=redis)
     await callback.message.edit_text(
@@ -171,7 +185,9 @@ async def menu_cart(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDataba
 
 
 @router.callback_query(F.data.startswith("plus_"))
-async def plus_quantity(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase):
+async def cmd_plus_quantity(
+    callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
+):
     (product, size, cart, full_callback_name, quantity) = await getall(
         callback=callback, redis=redis, db=db
     )
@@ -185,7 +201,7 @@ async def plus_quantity(callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDa
 
 
 @router.callback_query(F.data.startswith("minus_"))
-async def minus_quantity(
+async def cmd_minus_quantity(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
     (product, size, cart, full_callback_name, quantity) = await getall(
@@ -204,7 +220,7 @@ async def minus_quantity(
 
 
 @router.callback_query(F.data.startswith("del_"))
-async def delete_from_cart(
+async def cmd_delete_from_cart(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
     (product, size, cart, full_callback_name, quantity) = await getall(
@@ -220,7 +236,7 @@ async def delete_from_cart(
 
 
 @router.callback_query(F.data == "erase_cart")
-async def erase_cart(callback: CallbackQuery, redis: Redis):
+async def cmd_erase_cart(callback: CallbackQuery, redis: Redis):
     cart = Cart(user_id=callback.from_user.id, redis=redis)
     await callback.message.edit_text(
         f"Корзина была очищена.",
@@ -239,7 +255,7 @@ async def menu_contacts(callback: CallbackQuery):
 
 @router.message(Command("admin"))
 @router.callback_query(F.data == "admin")
-async def handle_admin(
+async def cmd_handle_admin(
     event: Message | CallbackQuery, state: FSMContext, db: AsyncSQLiteDatabase
 ):
     user = await db.get_user_by_id(event.from_user.id)
@@ -266,7 +282,7 @@ async def handle_admin(
 
 
 @router.message(Command("db"))
-async def handle_redis(message: Message, redis: Redis, db: AsyncSQLiteDatabase):
+async def cmd_handle_redis(message: Message, redis: Redis, db: AsyncSQLiteDatabase):
     user = await db.get_user_by_id(message.from_user.id)
     if user.is_admin:
         await redis.set("REDIS_STATUS", "OK")
@@ -294,16 +310,16 @@ class AddProduct(StatesGroup):
 
 
 @router.callback_query(F.data == "product_create")
-async def product_create(callback: CallbackQuery, state: FSMContext):
+async def cmd_product_create(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
-        f"ДОБАВЛЕНИЕ ТОВАРА. Выберите тип товара:",
+        f"ДОБАВЛЕНИЕ ТОВАРА \nВыберите тип товара:",
         reply_markup=await kb.create_product(),
     )
     await state.set_state(AddProduct.choose_type)
 
 
 @router.callback_query(AddProduct.choose_type, F.data.startswith("product_create_"))
-async def product_create_choose_type(callback: CallbackQuery, state: FSMContext):
+async def state_product_create_choose_type(callback: CallbackQuery, state: FSMContext):
     category = callback.data.split("_")[-1]
     await state.update_data(category=category)
     categories = {
@@ -316,13 +332,13 @@ async def product_create_choose_type(callback: CallbackQuery, state: FSMContext)
     await state.update_data(emoji=categories[category][1])
     await state.set_state(AddProduct.add_name)
     await callback.message.edit_text(
-        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}). Добавьте название (обязательно):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}) \nДобавьте название (обязательно):",
         reply_markup=await kb.cancel_creation(),
     )
 
 
 @router.message(AddProduct.add_name)
-async def product_create_add_name(message: Message, state: FSMContext):
+async def state_product_create_add_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text.capitalize())
     await state.update_data(
         callback_name=translit(
@@ -331,59 +347,59 @@ async def product_create_add_name(message: Message, state: FSMContext):
     )
     await state.set_state(AddProduct.add_price_small_size)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}). Добавьте цену для стандартного размера (обязательно):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}) \nДобавьте цену для стандартного размера (обязательно):",
         reply_markup=await kb.cancel_creation(),
     )
 
 
 @router.message(AddProduct.add_price_small_size)
-async def product_create_add_price_small(message: Message, state: FSMContext):
+async def state_product_create_add_price_small(message: Message, state: FSMContext):
     await state.update_data(price_small=message.text.replace(",", "."))
     await state.set_state(AddProduct.add_price_large_size)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")} BYN). Добавьте цену для большого размера (0 если такого размера не будет):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")} BYN) \nДобавьте цену для большого размера (0 если такого размера не будет):",
         reply_markup=await kb.cancel_creation(),
     )
 
 
 @router.message(AddProduct.add_price_large_size)
-async def product_create_add_price_large(message: Message, state: FSMContext):
+async def state_product_create_add_price_large(message: Message, state: FSMContext):
     await state.update_data(
         price_large=message.text.replace(",", ".") if message.text != "0" else None
     )
     await state.set_state(AddProduct.add_description)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN). Добавьте описание (0 если без описания):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN) \nДобавьте описание (0 если без описания):",
         reply_markup=await kb.cancel_creation(),
     )
 
 
 @router.message(AddProduct.add_description)
-async def product_create_add_description(message: Message, state: FSMContext):
+async def state_product_create_add_description(message: Message, state: FSMContext):
     await state.update_data(
         description=message.text.capitalize() if message.text != "0" else None
     )
     await state.set_state(AddProduct.add_ingredients)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN). Добавьте состав (0 если без состава):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN) \nДобавьте состав (0 если без состава):",
         reply_markup=await kb.cancel_creation(),
     )
 
 
 @router.message(AddProduct.add_ingredients)
-async def product_create_add_ingredients(message: Message, state: FSMContext):
+async def state_product_create_add_ingredients(message: Message, state: FSMContext):
     await state.update_data(
         ingredients=message.text.capitalize() if message.text != "0" else None
     )
     await state.set_state(AddProduct.add_nutrition)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА ({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN). Добавьте КБЖУ (0 если без КБЖУ):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}, {await state.get_value("price_small")}/{await state.get_value("price_large")} BYN) \nДобавьте КБЖУ (0 если без КБЖУ):",
         reply_markup=await kb.cancel_creation(),
     )
 
 
 @router.message(AddProduct.add_nutrition)
-async def product_create_add_nutrition(
+async def state_product_create_add_nutrition(
     message: Message, db: AsyncSQLiteDatabase, state: FSMContext
 ):
     await state.update_data(nutrition=message.text if message.text != "0" else None)
@@ -419,21 +435,32 @@ async def product_create_add_nutrition(
 
 
 @router.callback_query(F.data == "product_delete")
-async def product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+async def cmd_product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
     await callback.message.edit_text(
-        f"УДАЛЕНИЕ ТОВАРА. Выберите товар из списка для удаления:",
-        reply_markup=await kb.delete_product(products),
+        f"УДАЛЕНИЕ ТОВАРА \nВыберите товар из списка для удаления:",
+        reply_markup=await kb.product_delete(products),
     )
 
 
-@router.callback_query(F.startswith("product_delete_"))
-async def product_delete_specified(callback: CallbackQuery, db: AsyncSQLiteDatabase):
-    products = await db.get_products()
+@router.callback_query(F.data.startswith("product_delete_"))
+async def cmd_product_confirm_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     product = await db.get_product_by_callback_name(callback.data.split("_")[-1])
     await callback.message.edit_text(
-        f"УДАЛЕНИЕ ТОВАРА. Вы уверены, что хотите удалить {product.name}:",
-        reply_markup=await kb.delete_product(products),
+        f"УДАЛЕНИЕ ТОВАРА \nВы уверены, что хотите удалить {product.emoji} {product.name}?",
+        reply_markup=await kb.product_confirmed_delete(product.callback_name),
+    )
+
+
+@router.callback_query(F.data.startswith("product_confirmed_delete_"))
+async def cmd_product_confirmed_delete(
+    callback: CallbackQuery, db: AsyncSQLiteDatabase
+):
+    product = await db.get_product_by_callback_name(callback.data.split("_")[-1])
+    db.delete_product(product.callback_name)
+    await callback.message.edit_text(
+        f"Товар {product.emoji} {product.name} успешно удалён\nАДМИНПАНЕЛЬ:",
+        reply_markup=await kb.admin(),
     )
 
 
