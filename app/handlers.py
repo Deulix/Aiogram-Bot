@@ -46,8 +46,7 @@ async def cmd_main_menu(
 ):
     await state.clear()
     tg_user = callback.from_user
-    db_user = await db.get_user_by_id(tg_user.id)
-    await db.update_user(tg_user)
+    db_user = await db.update_user(tg_user)
     adm_txt = "/admin\n/start\n" if db_user.is_admin else ""
     await callback.message.edit_text(
         f"{adm_txt}Привет, {db_user.first_name}! Выбери пункт меню:",
@@ -95,12 +94,12 @@ class Cart:
         current_amount = await self.redis.get(self.amount_key)
         return current_amount
 
-    async def add(self, price: float):
+    async def add_amount(self, price: float):
         await self.redis.incrbyfloat(self.amount_key, price)
         await self.redis.expire(self.amount_key, 3600 * 12)
         await self.redis.expire(self.cart_key, 3600 * 12)
 
-    async def sub(self, price: float):
+    async def sub_amount(self, price: float):
         await self.redis.incrbyfloat(self.amount_key, -price)
         await self.redis.expire(self.amount_key, 3600 * 12)
         await self.redis.expire(self.cart_key, 3600 * 12)
@@ -112,10 +111,10 @@ class Cart:
     async def delete_product(self, full_callback_name: str):
         await self.redis.hdel(self.cart_key, full_callback_name)
 
-    async def increase(self, full_callback_name: str):
+    async def increase_prod_count(self, full_callback_name: str):
         await self.redis.hincrby(self.cart_key, full_callback_name, 1)
 
-    async def decrease(self, full_callback_name: str):
+    async def decrease_prod_count(self, full_callback_name: str):
         await self.redis.hincrby(self.cart_key, full_callback_name, -1)
 
 
@@ -141,7 +140,7 @@ async def cmd_add_to_cart(
         callback=callback, redis=redis, db=db
     )
 
-    await cart.increase(full_callback_name)
+    await cart.increase_prod_count(full_callback_name)
     quantity += 1
     products = await db.get_products_by_category(product.category)
     text = f"{product.category_rus.capitalize()} {product.name} {product.large_size_text if size == "large" else product.small_size_text} ({quantity} шт) добавлен(а) в корзину"
@@ -149,7 +148,7 @@ async def cmd_add_to_cart(
     # logger.info(
     #     f"***User {user_id} added {product.name} to cart with size {size} and quantity {quantity}***"
     # )
-    await cart.add(product.get_current_price(size))
+    await cart.add_amount(product.get_current_price(size))
     await callback.message.edit_text(
         f"{text} \n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN",
         reply_markup=await kb.init_category_menu(products, product.category),
@@ -191,8 +190,8 @@ async def cmd_plus_quantity(
     (product, size, cart, full_callback_name, quantity) = await getall(
         callback=callback, redis=redis, db=db
     )
-    await cart.increase(full_callback_name)
-    await cart.add(product.get_current_price(size))
+    await cart.increase_prod_count(full_callback_name)
+    await cart.add_amount(product.get_current_price(size))
     sorted_list_cart_items = await get_cart(callback.from_user.id, redis, db)
     await callback.message.edit_text(
         f"{callback.from_user.first_name}, вот твоя корзина:\n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN",
@@ -208,7 +207,7 @@ async def cmd_minus_quantity(
         callback=callback, redis=redis, db=db
     )
     if int(quantity) > 1:
-        await cart.decrease(full_callback_name)
+        await cart.decrease_prod_count(full_callback_name)
     else:
         await cart.delete_product(full_callback_name)
     await cart.sub(product.get_current_price(size))
@@ -289,7 +288,7 @@ async def cmd_handle_redis(message: Message, redis: Redis, db: AsyncSQLiteDataba
         redis_result = await redis.get("REDIS_STATUS")
         sqlite_result = await db.check_connection()
         await message.answer(
-            f"REDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
+            f"/admin\n/start\nREDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
         )
         redis.delete("REDIS_STATUS")
     else:
@@ -457,10 +456,32 @@ async def cmd_product_confirmed_delete(
     callback: CallbackQuery, db: AsyncSQLiteDatabase
 ):
     product = await db.get_product_by_callback_name(callback.data.split("_")[-1])
-    db.delete_product(product.callback_name)
+    await db.delete_product(product.callback_name)
     await callback.message.edit_text(
         f"Товар {product.emoji} {product.name} успешно удалён\nАДМИНПАНЕЛЬ:",
         reply_markup=await kb.admin(),
+    )
+
+
+class EditProduct(StatesGroup):
+    edit = State()
+
+
+@router.callback_query(F.data == "product_edit")
+async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+    products = await db.get_products()
+    await callback.message.edit_text(
+        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите товар из списка для изменения:",
+        reply_markup=await kb.product_edit(products),
+    )
+
+
+@router.callback_query(F.data.startswith("product_edit_"))
+async def cmd_product_edit_choose(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+    product = await db.get_product_by_callback_name(callback.data.split("_")[-1])
+    await callback.message.edit_text(
+        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите значение из списка для изменения",
+        reply_markup=await kb.product_edit_choose(product),
     )
 
 

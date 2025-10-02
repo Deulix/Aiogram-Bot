@@ -1,8 +1,7 @@
-.git
+.git/
 .gitignore
 .env
-__pycache__
+__pycache__/
 *.pyc
 *.pyo
-Dockerfile
-README.md
+database/

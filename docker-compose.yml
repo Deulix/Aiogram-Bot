@@ -1,23 +1,31 @@
 services:
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
+    redis:
+        image: redis:7-alpine
+        container_name: redis
+        volumes:
+            - redis_data:/data
+        restart: unless-stopped
+        networks:
+            - aiobot-network
 
-  aiobot:
-    build: .
-    container_name: aiobot
-    depends_on:
-      - redis
-    env_file:
-      - .env
-    environment:
-      - REDIS_HOST=redis
-    restart: unless-stopped
-    volumes:
-      - ./database:/bot_app/database
-  
+    aiobot:
+        build: .
+        container_name: aiobot
+        depends_on:
+            - redis
+        env_file:
+            - .env
+        environment:
+            - REDIS_HOST=redis
+        restart: unless-stopped
+        volumes:
+            - ./database:/bot_app/database
+        networks:
+            - aiobot-network
+        
+    
 volumes:
-  redis_data:
+    redis_data:
+
+networks:
+    aiobot-network:

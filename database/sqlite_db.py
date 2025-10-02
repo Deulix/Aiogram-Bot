@@ -39,7 +39,7 @@ class Product(Base):
     __tablename__ = "products"
     id: int = Column(Integer, primary_key=True)
     name: str = Column(String(255), nullable=False)
-    callback_name: str = Column(String(255), nullable=False)
+    callback_name: str = Column(String(255), unique=True, nullable=False)
     description: str | None = Column(Text, nullable=True)
     ingredients: str | None = Column(Text, nullable=True)
     nutrition: str | None = Column(String(100), nullable=True)
@@ -210,17 +210,17 @@ class AsyncSQLiteDatabase:
             result = await session.execute(
                 select(Product).where(Product.callback_name == callback_name)
             )
-            return result.scalar()
+            return result.scalar_one_or_none()
 
     async def get_user_by_id(self, user_id):
         async with self.AsyncSession() as session:
             result = await session.execute(select(User).where(User.user_id == user_id))
-            return result.scalar()
+            return result.scalar_one_or_none()
 
     async def get_products_by_category(self, category: int):
         async with self.AsyncSession() as session:
             result = await session.execute(
-                select(Product).where(Product.category == category)
+                select(Product).where(Product.category == 'snack', Product.category == 'cake')
             )
             return result.scalars().all()
 
