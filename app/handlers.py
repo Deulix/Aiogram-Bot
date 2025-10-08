@@ -116,7 +116,7 @@ class Cart:
 
 async def getall(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
-) -> tuple[Product, str, Cart, str, int, float, list]:
+) -> tuple[Product, str, Cart, str, int, list]:
     id = callback.data.split("_")[-2]
     product = await db.get_product_by_id(id)
     size = callback.data.split("_")[-1]
@@ -124,8 +124,6 @@ async def getall(
     cart = Cart(user_id=callback.from_user.id, redis=redis)
     full_callback = f"{id}_{size}"
     quantity = await redis.hget(cart_key, full_callback) or 0
-    cart_amount = await cart.get_current_amount()
-    list_cart_items = await get_cart_list(callback.from_user.id, redis, db)
 
     return (
         product,
@@ -133,8 +131,6 @@ async def getall(
         cart,
         full_callback,
         int(quantity),
-        cart_amount,
-        list_cart_items,
     )
 
 
@@ -142,7 +138,7 @@ async def getall(
 async def cmd_add_to_cart(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
-    (product, size, cart, full_callback, quantity, *_) = await getall(
+    (product, size, cart, full_callback, quantity) = await getall(
         callback=callback, redis=redis, db=db
     )
 
@@ -200,12 +196,13 @@ async def cmd_cart_menu(
 async def cmd_plus_quantity(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
-    (product, size, cart, full_callback, _, _, list_cart_items) = await getall(
+    (product, size, cart, full_callback, _) = await getall(
         callback=callback, redis=redis, db=db
     )
     await cart.increase_prod_count(full_callback)
     await cart.add_amount(product.get_size_price(size))
     cart_amount = await cart.get_current_amount()
+    list_cart_items = await get_cart_list(callback.from_user.id, redis, db)
     await callback.message.edit_text(
         f"КОРЗИНА:",
         reply_markup=await kb.init_cart(list_cart_items, cart_amount),
@@ -216,7 +213,7 @@ async def cmd_plus_quantity(
 async def cmd_minus_quantity(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
-    (product, size, cart, full_callback, quantity, _, list_cart_items) = await getall(
+    (product, size, cart, full_callback, quantity) = await getall(
         callback=callback, redis=redis, db=db
     )
     if int(quantity) > 1:
@@ -225,6 +222,7 @@ async def cmd_minus_quantity(
         await cart.delete_product(full_callback)
     await cart.sub_amount(product.get_size_price(size))
     cart_amount = await cart.get_current_amount()
+    list_cart_items = await get_cart_list(callback.from_user.id, redis, db)
     await callback.message.edit_text(
         f"КОРЗИНА:",
         reply_markup=await kb.init_cart(list_cart_items, cart_amount),
@@ -235,11 +233,13 @@ async def cmd_minus_quantity(
 async def cmd_delete_from_cart(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
-    (product, size, cart, full_callback, quantity, cart_amount, list_cart_items) = (
-        await getall(callback=callback, redis=redis, db=db)
+    (product, size, cart, full_callback, quantity) = await getall(
+        callback=callback, redis=redis, db=db
     )
     await cart.delete_product(full_callback)
     await cart.sub_amount(product.get_size_price(size) * quantity)
+    cart_amount = await cart.get_current_amount()
+    list_cart_items = await get_cart_list(callback.from_user.id, redis, db)
     await callback.message.edit_text(
         f"{callback.from_user.first_name}, вот твоя корзина:\n\nОбщая стоимость корзины: {await cart.get_current_amount()} BYN",
         reply_markup=await kb.init_cart(list_cart_items, cart_amount),
@@ -524,6 +524,40 @@ async def cmd_product_edit_choose(callback: CallbackQuery, db: AsyncSQLiteDataba
     )
 
 
+class AdminCreation(StatesGroup):
+    create = State()
+
+
+@handlers_router.callback_query(F.data == "set_admin_rights")
+async def admin_list(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+    admins = await db.get_admins()
+    callback_user = callback.from_user
+    await callback.message.edit_text(
+        "АДМИНИСТРАТОРЫ:\n\nВыберите пункт из списка:",
+        reply_markup=await kb.admin_list(admins, callback_user),
+    )
+
+
+@handlers_router.callback_query(F.data == "admin_create")
+async def input_admin_id(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(
+        "ДОБАВЛЕНИЕ АДМИНИСТРАТОРА:\n\nВведите ID нового администратора:",
+        reply_markup=await kb.cancel_creation(),
+    )
+    await state.set_state(AdminCreation.create)
+
+
+@handlers_router.message(AdminCreation.create)
+async def toggle_admin(message: Message, state: FSMContext, db: AsyncSQLiteDatabase):
+    admin_id = message.text
+    value = await db.toggle_admin(admin_id)
+    await message.answer(
+        f"ДОБАВЛЕНИЕ АДМИНИСТРАТОРА:\n\n{f"Новый администратор (ID{admin_id}) успешно добавлен." if value else f"Администратор с ID{admin_id} снят."}",
+        reply_markup=await kb.cancel_creation(),
+    )
+    await state.clear()
+
+
 #### ОФОРМЛЕНИЕ ЗАКАЗА ####
 
 
@@ -547,7 +581,7 @@ async def start(callback: CallbackQuery, state: FSMContext):
 
 @handlers_router.message(OrderStates.client)
 async def client(message: Message, state: FSMContext):
-    await state.update_data(client=message.text)
+    await state.update_data(client_name=message.text)
 
     await message.answer(
         "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите улицу:", reply_markup=await kb.cancel_payment()
@@ -604,7 +638,7 @@ async def additional_info(
 ):
     await state.update_data(additional_info=message.text)
     data = await state.get_data()
-    client = data["client"]
+    client_name = data["client_name"]
     street = data["street"]
     house = data["house"]
     apartment = data["apartment"]
@@ -625,12 +659,17 @@ async def additional_info(
         )
         cart_text_normalized = "".join(cart_text)
 
-    address_text = f"Имя: {client}, Адрес: ул. {street} {house}, кв {apartment or "не указан"}, этаж: {floor or "не указан"}\nДоп инфо: {additional_info or "не указано"}"
+    address_text = f"Имя: {client_name}. Адрес: ул. {street} {house}, кв {apartment or "не указан"}, этаж: {floor or "не указан"}\nДоп инфо: {additional_info or "не указано"}"
+    raw_address = (
+        f"street:{street}, house:{house}, apartment:{apartment}, floor:{floor}"
+    )
+    order = await db.add_order(
+        message.from_user.id, list_cart_items, client_name, raw_address
+    )
     await message.answer(
-        f'Спасибо, заказ оформлен!\n\n{cart_text_normalized}\n\n{address_text}\n\nСТОИМОСТЬ {amount:.2f} BYN\n\nПосмотреть статус заказа можно в меню "Мои заказы"',
+        f'Спасибо, заказ #{order.id} оформлен!\n\n{cart_text_normalized}\nСТОИМОСТЬ {amount:.2f} BYN\n\n{address_text}\n\nПосмотреть статус заказа можно в меню "Мои заказы"',
         reply_markup=await kb.pay_to_main(),
     )
-    await db.add_order(message.from_user.id, list_cart_items)
     await state.clear()
     await cart.clear()
 
@@ -643,7 +682,8 @@ async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     user_id = callback.from_user.id
     orders = await db.get_orders(user_id)
     await callback.message.edit_text(
-        "Список заказов:", reply_markup=await kb.orders(orders)
+        "СПИСОК ЗАКАЗОВ:" if orders else "Список заказов пуст.",
+        reply_markup=await kb.orders(orders),
     )
 
 
@@ -651,8 +691,22 @@ async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
 async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     order_id = callback.data.split("_")[-1]
     order = await db.get_order_by_id(order_id)
+    order_items = await db.get_order_items(order.id)
+    order_items_text = []
+    for order_item in order_items:
+        product = await db.get_product_by_id(order_item.product_id)
+        name = product.name
+        size = order_item.size
+        size_text = product.get_size_text(size)
+        quantity = order_item.quantity
+        price = order_item.price
+        order_items_text.append(
+            f"{name} {size_text} - {quantity} шт. -- {(price*quantity):.2f} BYN\n"
+        )
+    order_items_normalized = "".join(order_items_text)
     await callback.message.edit_text(
-        "Список заказов:", reply_markup=await kb.order_info(order)
+        f"ЗАКАЗ #{order.id} от {order.created_at}:\n\n{order_items_normalized}\nСТОИМОСТЬ: {order.amount:.2f} BYN",
+        reply_markup=await kb.order_info(),
     )
 
 
@@ -662,8 +716,7 @@ async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
 @handlers_router.message(Command("deleteme"))
 async def handle_answer(message: Message):
     await message.delete()
-    await message.answer(
-        "Я удалил твоё сообщение, и что ты мне сделаешь?")
+    await message.answer("Я удалил твоё сообщение, и что ты мне сделаешь?")
 
 
 @handlers_router.message(F.text)

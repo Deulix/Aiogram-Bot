@@ -13,6 +13,7 @@ from sqlalchemy import (
     func,
     select,
     text,
+    update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship
@@ -73,7 +74,12 @@ class Product(Base):
 
     @property
     def small_size_text(self):
-        return self.get_size_text("small")
+        if (
+            self.price_large
+        ):  # чтобы не показывало надпись "стандарт" у продуктов с одним размером
+            return self.get_size_text("small")
+        else:
+            return ""
 
     @property
     def large_size_text(self):
@@ -97,7 +103,7 @@ class Order(Base):
     user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
     client_name: str = Column(String(50), nullable=False)
     address: str = Column(Text, nullable=False)
-    amount: float = Column(Float, nullable=False)
+    amount: float = Column(Float, nullable=False, default=0)
     created_at: datetime = Column(
         DateTime,
         server_default=text("CURRENT_TIMESTAMP"),
@@ -220,9 +226,9 @@ class AsyncSQLiteDatabase:
                 await session.rollback()
                 print(f"Error adding product: {e}")
 
-    async def add_order(self, user_id, list_cart_items):
+    async def add_order(self, user_id, list_cart_items, client_name, raw_address):
         async with self.AsyncSession() as session:
-            order = Order(user_id=user_id, amount=0)
+            order = Order(user_id=user_id, client_name=client_name, address=raw_address)
             total_amount = 0
             session.add(order)
             await session.flush()
@@ -233,13 +239,30 @@ class AsyncSQLiteDatabase:
                     order_id=order.id,
                     product_id=product.id,
                     quantity=quantity,
-                    price=product.get_size_price(size) * quantity,
+                    price=product.get_size_price(size),
                     size=size,
                 )
                 total_amount += order_item.price
                 session.add(order_item)
             order.amount = total_amount
             await session.commit()
+            return order
+
+    async def toggle_admin(self, user_id):
+        async with self.AsyncSession() as session:
+            user = await self.get_user_by_id(user_id)
+            is_user_admin = user.is_admin
+            value = not is_user_admin
+            stmt = update(User).where(User.id == user_id).values(is_admin=value)
+            await session.execute(stmt)
+            await session.commit()
+            return value
+
+    async def get_admins(self):
+        async with self.AsyncSession() as session:
+            stmt = select(User).where(User.is_admin == True)
+            result = await session.execute(stmt)
+            return result.scalars().all()
 
     async def get_products(self):
         async with self.AsyncSession() as session:
@@ -251,26 +274,32 @@ class AsyncSQLiteDatabase:
 
     async def get_orders(self, user_id):
         async with self.AsyncSession() as session:
-            result = await session.execute(
-                select(Order).where(Order.user_id == user_id)
-            )
+            stmt = select(Order).where(Order.user_id == user_id)
+            result = await session.execute(stmt)
             return sorted(result.scalars().all(), key=lambda x: x.created_at)
-        
+
+    async def get_order_items(self, order_id):
+        async with self.AsyncSession() as session:
+            stmt = select(OrderItem).where(OrderItem.order_id == order_id)
+            result = await session.execute(stmt)
+            return result.scalars().all()
+
     async def get_order_by_id(self, order_id):
         async with self.AsyncSession() as session:
-            result = await session.execute(
-                select(Order).where(Order.id == order_id)
-            )
+            stmt = select(Order).where(Order.id == order_id)
+            result = await session.execute(stmt)
             return result.scalar_one_or_none()
 
-    async def get_product_by_id(self, id):
+    async def get_product_by_id(self, product_id):
         async with self.AsyncSession() as session:
-            result = await session.execute(select(Product).where(Product.id == id))
+            stmt = select(Product).where(Product.id == product_id)
+            result = await session.execute(stmt)
             return result.scalar_one_or_none()
 
     async def get_user_by_id(self, user_id):
         async with self.AsyncSession() as session:
-            result = await session.execute(select(User).where(User.user_id == user_id))
+            stmt = select(User).where(User.user_id == user_id)
+            result = await session.execute(stmt)
             return result.scalar_one_or_none()
 
     async def get_products_by_category(self, category: str):
@@ -292,7 +321,8 @@ class AsyncSQLiteDatabase:
 
     async def delete_product(self, id):
         async with self.AsyncSession() as session:
-            result = await session.execute(select(Product).where(Product.id == id))
+            stmt = select(Product).where(Product.id == id)
+            result = await session.execute(stmt)
             product = result.scalar_one_or_none()
             await session.delete(product)
             await session.commit()
