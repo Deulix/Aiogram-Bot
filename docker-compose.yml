@@ -5,8 +5,8 @@ services:
         volumes:
             - redis_data:/data
         restart: unless-stopped
-        networks:
-            - aiobot-network
+        env_file:
+            - .env
 
     aiobot:
         build: .
@@ -15,17 +15,9 @@ services:
             - redis
         env_file:
             - .env
-        environment:
-            - REDIS_HOST=redis
         restart: unless-stopped
         volumes:
             - ./database:/bot_app/database
-        networks:
-            - aiobot-network
-        
-    
+
 volumes:
     redis_data:
-
-networks:
-    aiobot-network:

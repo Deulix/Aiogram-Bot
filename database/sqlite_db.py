@@ -1,27 +1,28 @@
-from datetime import datetime
 import os
+from datetime import datetime
+
 from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
     Float,
+    ForeignKey,
     Integer,
     String,
     Text,
     func,
     select,
     text,
-    delete,
 )
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, unique=True, nullable=False)
     username = Column(String(100))
     first_name = Column(String(100))
@@ -37,9 +38,8 @@ class User(Base):
 
 class Product(Base):
     __tablename__ = "products"
-    id: int = Column(Integer, primary_key=True)
+    id: int = Column(Integer, primary_key=True, index=True)
     name: str = Column(String(255), nullable=False)
-    callback_name: str = Column(String(255), unique=True, nullable=False)
     description: str | None = Column(Text, nullable=True)
     ingredients: str | None = Column(Text, nullable=True)
     nutrition: str | None = Column(String(100), nullable=True)
@@ -54,37 +54,32 @@ class Product(Base):
         default=func.now(),
         nullable=False,
     )
+    order_items = relationship(
+        "OrderItem", backref="product"
+    )  # соединяет в 2 стороны Product.order_items <-> OrderItems.product
+    # вариант более явный это back_popultates, но там надо прописывать с обеих сторон
+    # ПРИМЕР: в Product строчка order_items = relationship("OrderItem", back_popultates="product"),
+    # а в OrderItem строчка product = relationship("Product", back_popultates="order_items")
+    # тогда будет коннект, backref экономит несколько строк
 
-    def __get_size_text(self):
-        match self.category:
-            case "pizza":
-                size_text = {"small": "cтандарт", "large": "большая"}
-            case "snack":
-                size_text = {"small": "cтандарт", "large": "большая"}
-            case "drink":
-                size_text = {"small": "0.5 литра", "large": "1 литр"}
-            case "cake":
-                size_text = {"small": "cтандарт", "large": "большой"}
-        return size_text
+    def get_size_text(self, size):
+        sizes = {
+            "pizza": {"small": "cтандарт", "large": "большая"},
+            "snack": {"small": "cтандарт", "large": "большая"},
+            "drink": {"small": "0.5 литра", "large": "1 литр"},
+            "cake": {"small": "cтандарт", "large": "большой"},
+        }
+        return sizes[self.category][size]
 
     @property
     def small_size_text(self):
-        if self.price_large:
-            return self.__get_size_text()["small"]
-        else:
-            return ""
+        return self.get_size_text("small")
 
     @property
     def large_size_text(self):
-        return self.__get_size_text()["large"]
+        return self.get_size_text("large")
 
-    def get_current_size_text(self, size):
-        if self.price_large:
-            return self.__get_size_text()[size]
-        else:
-            return ""
-
-    def get_current_price(self, size):
+    def get_size_price(self, size):
         if size == "large":
             return self.price_large
         elif size == "small":
@@ -94,6 +89,36 @@ class Product(Base):
 
     def has_only_one_size(self):
         return self.price_large is None
+
+
+class Order(Base):
+    __tablename__ = "orders"
+    id: int = Column(Integer, primary_key=True, index=True)
+    user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
+    client_name: str = Column(String(50), nullable=False)
+    address: str = Column(Text, nullable=False)
+    amount: float = Column(Float, nullable=False)
+    created_at: datetime = Column(
+        DateTime,
+        server_default=text("CURRENT_TIMESTAMP"),
+        default=func.now(),
+        nullable=False,
+    )
+
+    user = relationship("User", backref="orders")
+    order_items = relationship(
+        "OrderItem", backref="order", cascade="all, delete-orphan"
+    )
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+    id: int = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"))
+    product_id = Column(Integer, ForeignKey("products.id"))
+    quantity = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)
+    size = Column(String(10), nullable=False)
 
 
 class AsyncSQLiteDatabase:
@@ -166,7 +191,6 @@ class AsyncSQLiteDatabase:
     async def add_product(
         self,
         name: str,
-        callback_name: str,
         price_small: float,
         price_large: float,
         category: str,
@@ -180,7 +204,6 @@ class AsyncSQLiteDatabase:
             try:
                 product = Product(
                     name=name,
-                    callback_name=callback_name,
                     price_small=price_small,
                     price_large=price_large,
                     category=category,
@@ -197,6 +220,27 @@ class AsyncSQLiteDatabase:
                 await session.rollback()
                 print(f"Error adding product: {e}")
 
+    async def add_order(self, user_id, list_cart_items):
+        async with self.AsyncSession() as session:
+            order = Order(user_id=user_id, amount=0)
+            total_amount = 0
+            session.add(order)
+            await session.flush()
+            for item in list_cart_items:
+                product, size, quantity = item
+                product: Product
+                order_item = OrderItem(
+                    order_id=order.id,
+                    product_id=product.id,
+                    quantity=quantity,
+                    price=product.get_size_price(size) * quantity,
+                    size=size,
+                )
+                total_amount += order_item.price
+                session.add(order_item)
+            order.amount = total_amount
+            await session.commit()
+
     async def get_products(self):
         async with self.AsyncSession() as session:
             result = await session.execute(select(Product))
@@ -205,11 +249,23 @@ class AsyncSQLiteDatabase:
                 result.scalars().all(), key=lambda x: category_order.index(x.category)
             )
 
-    async def get_product_by_callback_name(self, callback_name):
+    async def get_orders(self, user_id):
         async with self.AsyncSession() as session:
             result = await session.execute(
-                select(Product).where(Product.callback_name == callback_name)
+                select(Order).where(Order.user_id == user_id)
             )
+            return sorted(result.scalars().all(), key=lambda x: x.created_at)
+        
+    async def get_order_by_id(self, order_id):
+        async with self.AsyncSession() as session:
+            result = await session.execute(
+                select(Order).where(Order.id == order_id)
+            )
+            return result.scalar_one_or_none()
+
+    async def get_product_by_id(self, id):
+        async with self.AsyncSession() as session:
+            result = await session.execute(select(Product).where(Product.id == id))
             return result.scalar_one_or_none()
 
     async def get_user_by_id(self, user_id):
@@ -217,27 +273,26 @@ class AsyncSQLiteDatabase:
             result = await session.execute(select(User).where(User.user_id == user_id))
             return result.scalar_one_or_none()
 
-    async def get_products_by_category(self, category: int):
+    async def get_products_by_category(self, category: str):
         async with self.AsyncSession() as session:
-            result = await session.execute(
-                select(Product).where(Product.category == 'snack', Product.category == 'cake')
-            )
+            stmt = select(Product).where(Product.category == category)
+            if category == "snack":
+                stmt = select(Product).where(Product.category.in_([category, "snack"]))
+            result = await session.execute(stmt)
             return result.scalars().all()
 
     async def check_connection(self):
         try:
             async with self.AsyncSession() as session:
-                result = await session.execute(text("SELECT 1"))
+                await session.execute(text("SELECT 1"))
                 return True
         except Exception as e:
             print(f"Ошибка подключения к БД: {e}")
             return False
 
-    async def delete_product(self, callback_name):
+    async def delete_product(self, id):
         async with self.AsyncSession() as session:
-            result = await session.execute(
-                select(Product).where(Product.callback_name == callback_name)
-            )
+            result = await session.execute(select(Product).where(Product.id == id))
             product = result.scalar_one_or_none()
             await session.delete(product)
             await session.commit()
