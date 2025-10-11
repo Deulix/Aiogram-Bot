@@ -128,7 +128,7 @@ async def admin():
         InlineKeyboardButton(text="🖍️ Изменить продукт", callback_data="product_edit"),
         InlineKeyboardButton(text="❌ Удалить продукт", callback_data="product_delete"),
         InlineKeyboardButton(
-            text="🛑 Права суперпользователя 🛑", callback_data="set_admin_rights"
+            text="🛑 Права суперпользователя 🛑", callback_data="admin_list"
         ),
         InlineKeyboardButton(text="👤 В меню пользователя", callback_data="main menu"),
     )
@@ -159,7 +159,7 @@ async def admin_list(admins: list[User], callback_user: User):
     keyboard = InlineKeyboardBuilder()
     for admin in admins:
         text = f'{admin.user_id} - {admin.username} - {admin.first_name}{" (Вы)" if admin.user_id == callback_user.id else ""}'
-        keyboard.add(InlineKeyboardButton(text=text, callback_data="1"))
+        keyboard.add(InlineKeyboardButton(text=text, callback_data=f"admin_id_{admin.user_id}"))
     keyboard.add(
         InlineKeyboardButton(
             text="Добавить нового администратора", callback_data="admin_create"
@@ -250,6 +250,12 @@ async def product_edit_choose(product: Product):
     )
 
     return keyboard.as_markup()
+
+
+async def back_to_admin_list():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(InlineKeyboardButton(text="Назад", callback_data="admin_list"))
+    return keyboard.adjust().as_markup()
 
 
 #### ОПЛАТА ####

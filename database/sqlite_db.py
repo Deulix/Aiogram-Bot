@@ -1,130 +1,11 @@
 import os
-from datetime import datetime
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    func,
-    select,
-    text,
-    update,
-)
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base
+from database.models import User, Product, Order, OrderItem
 
 Base = declarative_base()
-
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, unique=True, nullable=False)
-    username = Column(String(100))
-    first_name = Column(String(100))
-    last_name = Column(String(100), nullable=True)
-    created_at = Column(
-        DateTime,
-        server_default=text("CURRENT_TIMESTAMP"),
-        default=func.now(),
-        nullable=False,
-    )
-    is_admin = Column(Boolean, default=False, server_default=text("0"), nullable=False)
-
-
-class Product(Base):
-    __tablename__ = "products"
-    id: int = Column(Integer, primary_key=True, index=True)
-    name: str = Column(String(255), nullable=False)
-    description: str | None = Column(Text, nullable=True)
-    ingredients: str | None = Column(Text, nullable=True)
-    nutrition: str | None = Column(String(100), nullable=True)
-    price_small: float = Column(Float, nullable=False)
-    price_large: float = Column(Float, nullable=True)
-    category: str = Column(String(50), nullable=True)
-    category_rus: str = Column(String(50), nullable=True)
-    emoji: str = Column(String(5), nullable=True)
-    created_at: datetime = Column(
-        DateTime,
-        server_default=text("CURRENT_TIMESTAMP"),
-        default=func.now(),
-        nullable=False,
-    )
-    order_items = relationship(
-        "OrderItem", backref="product"
-    )  # соединяет в 2 стороны Product.order_items <-> OrderItems.product
-    # вариант более явный это back_popultates, но там надо прописывать с обеих сторон
-    # ПРИМЕР: в Product строчка order_items = relationship("OrderItem", back_popultates="product"),
-    # а в OrderItem строчка product = relationship("Product", back_popultates="order_items")
-    # тогда будет коннект, backref экономит несколько строк
-
-    def get_size_text(self, size):
-        sizes = {
-            "pizza": {"small": "cтандарт", "large": "большая"},
-            "snack": {"small": "cтандарт", "large": "большая"},
-            "drink": {"small": "0.5 литра", "large": "1 литр"},
-            "cake": {"small": "cтандарт", "large": "большой"},
-        }
-        return sizes[self.category][size]
-
-    @property
-    def small_size_text(self):
-        if (
-            self.price_large
-        ):  # чтобы не показывало надпись "стандарт" у продуктов с одним размером
-            return self.get_size_text("small")
-        else:
-            return ""
-
-    @property
-    def large_size_text(self):
-        return self.get_size_text("large")
-
-    def get_size_price(self, size):
-        if size == "large":
-            return self.price_large
-        elif size == "small":
-            return self.price_small
-        else:
-            return 0
-
-    def has_only_one_size(self):
-        return self.price_large is None
-
-
-class Order(Base):
-    __tablename__ = "orders"
-    id: int = Column(Integer, primary_key=True, index=True)
-    user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
-    client_name: str = Column(String(50), nullable=False)
-    address: str = Column(Text, nullable=False)
-    amount: float = Column(Float, nullable=False, default=0)
-    created_at: datetime = Column(
-        DateTime,
-        server_default=text("CURRENT_TIMESTAMP"),
-        default=func.now(),
-        nullable=False,
-    )
-
-    user = relationship("User", backref="orders")
-    order_items = relationship(
-        "OrderItem", backref="order", cascade="all, delete-orphan"
-    )
-
-
-class OrderItem(Base):
-    __tablename__ = "order_items"
-    id: int = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"))
-    product_id = Column(Integer, ForeignKey("products.id"))
-    quantity = Column(Integer, nullable=False)
-    price = Column(Float, nullable=False)
-    size = Column(String(10), nullable=False)
 
 
 class AsyncSQLiteDatabase:
@@ -149,11 +30,11 @@ class AsyncSQLiteDatabase:
         async with self.AsyncSession() as session:
             try:
                 new_user = User(
-                    user_id=user_id,
+                    id=user_id,
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
-                    is_admin=(user_id == int(os.getenv("ADMIN_ID"))),
+                    is_admin=(id == int(os.getenv("ADMIN_ID"))),
                 )
 
                 session.add(new_user)
@@ -169,9 +50,8 @@ class AsyncSQLiteDatabase:
     async def update_user(self, tg_user: TgUser):
 
         async with self.AsyncSession() as session:
-            result = await session.execute(
-                select(User).where(User.user_id == tg_user.id)
-            )
+            stmt = select(User).where(User.id == tg_user.id)
+            result = await session.execute(stmt)
             db_user = result.scalar_one_or_none()
             try:
                 if (
@@ -251,10 +131,10 @@ class AsyncSQLiteDatabase:
     async def toggle_admin(self, user_id):
         async with self.AsyncSession() as session:
             user = await self.get_user_by_id(user_id)
-            is_user_admin = user.is_admin
-            value = not is_user_admin
-            stmt = update(User).where(User.id == user_id).values(is_admin=value)
-            await session.execute(stmt)
+            if not user:
+                return None
+            value = not user.is_admin
+            user.is_admin = value
             await session.commit()
             return value
 
@@ -286,21 +166,18 @@ class AsyncSQLiteDatabase:
 
     async def get_order_by_id(self, order_id):
         async with self.AsyncSession() as session:
-            stmt = select(Order).where(Order.id == order_id)
-            result = await session.execute(stmt)
-            return result.scalar_one_or_none()
+            result = await session.get(Order, order_id)
+            return result
 
     async def get_product_by_id(self, product_id):
         async with self.AsyncSession() as session:
-            stmt = select(Product).where(Product.id == product_id)
-            result = await session.execute(stmt)
-            return result.scalar_one_or_none()
+            result = await session.get(Product, product_id)
+            return result
 
     async def get_user_by_id(self, user_id):
         async with self.AsyncSession() as session:
-            stmt = select(User).where(User.user_id == user_id)
-            result = await session.execute(stmt)
-            return result.scalar_one_or_none()
+            result = await session.get(User, user_id)
+            return result
 
     async def get_products_by_category(self, category: str):
         async with self.AsyncSession() as session:
@@ -319,11 +196,9 @@ class AsyncSQLiteDatabase:
             print(f"Ошибка подключения к БД: {e}")
             return False
 
-    async def delete_product(self, id):
+    async def delete_product(self, product_id):
         async with self.AsyncSession() as session:
-            stmt = select(Product).where(Product.id == id)
-            result = await session.execute(stmt)
-            product = result.scalar_one_or_none()
+            product = self.get_product_by_id(product_id)
             await session.delete(product)
             await session.commit()
 

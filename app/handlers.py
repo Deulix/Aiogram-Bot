@@ -5,7 +5,8 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
-from pydantic import BaseModel
+
+# from pydantic import BaseModel
 from redis.asyncio import Redis
 
 # from transliterate import translit
@@ -32,7 +33,7 @@ async def cmd_start(message: Message, db: AsyncSQLiteDatabase, state: FSMContext
     else:
         db_user = await db.update_user(tg_user)
 
-    adm_txt = "/admin\n/start\n" if db_user.is_admin else ""
+    adm_txt = "/admin\n" if db_user.is_admin else ""
 
     await message.answer(
         f"{adm_txt}Привет, {db_user.first_name}! Выбери пункт меню:",
@@ -524,11 +525,21 @@ async def cmd_product_edit_choose(callback: CallbackQuery, db: AsyncSQLiteDataba
     )
 
 
+@handlers_router.callback_query(F.data.startswith("admin_id_"))
+async def get_admin_info(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+    admin_id = callback.data.split("_")[-1]
+    admin = await db.get_user_by_id(admin_id)
+    await callback.message.edit_text(
+        f"ИНФОРМАЦИЯ ОБ АДМИНИСТРАТОРЕ\n\nID: {admin.user_id}\nUsername: @{admin.username}\nИмя: {admin.first_name}\n{f"Фамилия: {admin.last_name}\n" if admin.last_name else ""}",
+        reply_markup=await kb.back_to_admin_list(),
+    )
+
+
 class AdminCreation(StatesGroup):
     create = State()
 
 
-@handlers_router.callback_query(F.data == "set_admin_rights")
+@handlers_router.callback_query(F.data == "admin_list")
 async def admin_list(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     admins = await db.get_admins()
     callback_user = callback.from_user
@@ -550,12 +561,24 @@ async def input_admin_id(callback: CallbackQuery, state: FSMContext):
 @handlers_router.message(AdminCreation.create)
 async def toggle_admin(message: Message, state: FSMContext, db: AsyncSQLiteDatabase):
     admin_id = message.text
-    value = await db.toggle_admin(admin_id)
-    await message.answer(
-        f"ДОБАВЛЕНИЕ АДМИНИСТРАТОРА:\n\n{f"Новый администратор (ID{admin_id}) успешно добавлен." if value else f"Администратор с ID{admin_id} снят."}",
-        reply_markup=await kb.cancel_creation(),
-    )
-    await state.clear()
+    admin = await db.get_user_by_id(admin_id)
+    if not admin:
+        await message.answer(
+            f'❌ ОШИБКА! Пользователь с ID "{admin_id}" не найден. Введите корректный ID:',
+            reply_markup=await kb.cancel_creation(),
+        )
+    elif admin.is_admin:
+        await message.answer(
+            f'❌ ОШИБКА! Пользователь с ID "{admin_id}" уже является администратором. Введите корректный ID:',
+            reply_markup=await kb.cancel_creation(),
+        )
+    else:
+        await db.toggle_admin(admin_id)
+        await message.answer(
+            f"ДОБАВЛЕНИЕ АДМИНИСТРАТОРА:\n\n✅ Новый администратор (ID{admin_id}) успешно добавлен.",
+            reply_markup=await kb.admin(),
+        )
+        await state.clear()
 
 
 #### ОФОРМЛЕНИЕ ЗАКАЗА ####
@@ -688,7 +711,7 @@ async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
 
 
 @handlers_router.callback_query(F.data.startswith("order_"))
-async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+async def order_by_id(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     order_id = callback.data.split("_")[-1]
     order = await db.get_order_by_id(order_id)
     order_items = await db.get_order_items(order.id)
@@ -705,7 +728,7 @@ async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
         )
     order_items_normalized = "".join(order_items_text)
     await callback.message.edit_text(
-        f"ЗАКАЗ #{order.id} от {order.created_at}:\n\n{order_items_normalized}\nСТОИМОСТЬ: {order.amount:.2f} BYN",
+        f"ЗАКАЗ #{order.id} от {order.created_at}:\n\n{order_items_normalized}\nСТОИМОСТЬ: {order.amount:.2f} BYN\n\nАДРЕС:{1}",
         reply_markup=await kb.order_info(),
     )
 
