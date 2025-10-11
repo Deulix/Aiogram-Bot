@@ -20,7 +20,8 @@ class AsyncSQLiteDatabase:
 
     async def init_db(self):
         async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            # await conn.run_sync(Base.metadata.create_all) # нужно при отсутствии alembic
+            await self.check_connection()
         print(f"SQLITE CONNECTED")
         return self
 

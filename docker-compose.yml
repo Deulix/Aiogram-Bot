@@ -18,6 +18,7 @@ services:
         restart: unless-stopped
         volumes:
             - ./database:/bot_app/database
+        command: sh -c "alembic upgrade head && python main.py"
 
 volumes:
     redis_data:

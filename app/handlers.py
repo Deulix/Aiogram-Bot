@@ -11,7 +11,8 @@ from redis.asyncio import Redis
 
 # from transliterate import translit
 import app.keyboards as kb
-from database.sqlite_db import AsyncSQLiteDatabase, Product
+from database.sqlite_db import AsyncSQLiteDatabase
+from database.models import Product
 
 handlers_router = Router()
 
@@ -48,7 +49,7 @@ async def cmd_main_menu(
     await state.clear()
     tg_user = callback.from_user
     db_user = await db.update_user(tg_user)
-    adm_txt = "/admin\n/start\n" if db_user.is_admin else ""
+    adm_txt = "/admin\n" if db_user.is_admin else ""
     await callback.message.edit_text(
         f"{adm_txt}Привет, {db_user.first_name}! Выбери пункт меню:",
         reply_markup=await kb.main_menu(),
@@ -303,7 +304,7 @@ async def cmd_handle_redis(message: Message, redis: Redis, db: AsyncSQLiteDataba
         redis_result = await redis.get("REDIS_STATUS")
         sqlite_result = await db.check_connection()
         await message.answer(
-            f"/admin\n/start\nREDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
+            f"/admin\nREDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
         )
         await redis.delete("REDIS_STATUS")
     else:

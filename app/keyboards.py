@@ -158,8 +158,8 @@ async def cancel_creation():
 async def admin_list(admins: list[User], callback_user: User):
     keyboard = InlineKeyboardBuilder()
     for admin in admins:
-        text = f'{admin.user_id} - {admin.username} - {admin.first_name}{" (Вы)" if admin.user_id == callback_user.id else ""}'
-        keyboard.add(InlineKeyboardButton(text=text, callback_data=f"admin_id_{admin.user_id}"))
+        text = f'{admin.id} - {admin.username} - {admin.first_name}{" (Вы)" if admin.id == callback_user.id else ""}'
+        keyboard.add(InlineKeyboardButton(text=text, callback_data=f"admin_id_{admin.id}"))
     keyboard.add(
         InlineKeyboardButton(
             text="Добавить нового администратора", callback_data="admin_create"
