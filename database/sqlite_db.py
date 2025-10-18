@@ -107,9 +107,13 @@ class AsyncSQLiteDatabase:
                 await session.rollback()
                 print(f"Error adding product: {e}")
 
-    async def add_order(self, user_id, list_cart_items, client_name, raw_address):
+    async def add_order(
+        self, user_id, list_cart_items, client_name, phone, address_text, additional_info
+    ):
         async with self.AsyncSession() as session:
-            order = Order(user_id=user_id, client_name=client_name, address=raw_address)
+            order = Order(
+                user_id=user_id, client_name=client_name, phone=phone, address=address_text, additional_info=additional_info
+            )
             total_amount = 0
             session.add(order)
             await session.flush()
@@ -123,7 +127,7 @@ class AsyncSQLiteDatabase:
                     price=product.get_size_price(size),
                     size=size,
                 )
-                total_amount += order_item.price
+                total_amount += order_item.price * order_item.quantity
                 session.add(order_item)
             order.amount = total_amount
             await session.commit()
@@ -199,7 +203,7 @@ class AsyncSQLiteDatabase:
 
     async def delete_product(self, product_id):
         async with self.AsyncSession() as session:
-            product = self.get_product_by_id(product_id)
+            product = await self.get_product_by_id(product_id)
             await session.delete(product)
             await session.commit()
 

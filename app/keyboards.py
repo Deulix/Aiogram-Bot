@@ -47,7 +47,7 @@ async def init_category_menu(products: list[Product]):
             callback_data=f"add_{product.id}_large",
         )
 
-        if not product.has_only_one_size():
+        if not product.has_only_one_size:
             keyboard.row(name_btn, small_size_btn, large_size_btn)
         else:
             keyboard.row(name_btn, small_size_btn)
@@ -59,11 +59,11 @@ async def init_category_menu(products: list[Product]):
     return keyboard.as_markup()
 
 
-async def init_cart(list_cart_items: list, cart_amount: float):
+async def init_cart(cart_items: tuple, cart_amount: float):
     keyboard = InlineKeyboardBuilder()
 
-    if list_cart_items and cart_amount:
-        for product, size, quantity in list_cart_items:
+    if cart_items and cart_amount:
+        for product, size, quantity in cart_items:
             product: Product
             size: str
             quantity: str
@@ -83,7 +83,7 @@ async def init_cart(list_cart_items: list, cart_amount: float):
                     text=f"-1",
                     callback_data=(
                         f"minus_{product.id}_{size}"
-                        if int(quantity) > 1 or len(list_cart_items) > 1
+                        if int(quantity) > 1 or len(cart_items) > 1
                         else "erase_cart"
                     ),
                 ),
@@ -91,7 +91,7 @@ async def init_cart(list_cart_items: list, cart_amount: float):
                     text=f"❌",
                     callback_data=(
                         f"del_{product.id}_{size}"
-                        if len(list_cart_items) > 1
+                        if len(cart_items) > 1
                         else "erase_cart"
                     ),
                 ),
@@ -147,10 +147,18 @@ async def create_product():
     return keyboard.adjust(1).as_markup()
 
 
-async def cancel_creation():
+async def cancel_admin_action(action=""):
+    """
+    вызов без аргумента -> "Отмена"
+    "creation" -> "Отмена создания"
+    "addition" -> "Отмена добавления"
+    """
     keyboard = InlineKeyboardBuilder()
+    text_map = {"": "", "creation": "создания", "addition": "добавления"}
     keyboard.add(
-        InlineKeyboardButton(text="🛑 Отмена создания", callback_data="admin"),
+        InlineKeyboardButton(
+            text=f"🛑 Отмена {text_map[action]}", callback_data="admin"
+        ),
     )
     return keyboard.adjust().as_markup()
 
@@ -159,7 +167,9 @@ async def admin_list(admins: list[User], callback_user: User):
     keyboard = InlineKeyboardBuilder()
     for admin in admins:
         text = f'{admin.id} - {admin.username} - {admin.first_name}{" (Вы)" if admin.id == callback_user.id else ""}'
-        keyboard.add(InlineKeyboardButton(text=text, callback_data=f"admin_id_{admin.id}"))
+        keyboard.add(
+            InlineKeyboardButton(text=text, callback_data=f"admin_id_{admin.id}")
+        )
     keyboard.add(
         InlineKeyboardButton(
             text="Добавить нового администратора", callback_data="admin_create"
@@ -286,7 +296,7 @@ async def orders(orders: list[Order]):
     for order in orders:
         keyboard.add(
             InlineKeyboardButton(
-                text=f"Заказ #{order.id} от {order.created_at}",
+                text=f"Заказ #{order.id} от {order.created_at_local}",
                 callback_data=f"order_{order.id}",
             )
         )

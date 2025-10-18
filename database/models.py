@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import (
     Boolean,
@@ -13,7 +13,9 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.orm import declarative_base, relationship
+
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -28,6 +30,11 @@ class User(Base):
         nullable=False,
     )
     is_admin = Column(Boolean, default=False, server_default=text("0"), nullable=False)
+
+    @property
+    def created_at_local(self):
+        return self.created_at + timedelta(hours=3)
+
 
 class Product(Base):
     __tablename__ = "products"
@@ -85,6 +92,7 @@ class Product(Base):
         else:
             return 0
 
+    @property
     def has_only_one_size(self):
         return self.price_large is None
 
@@ -94,7 +102,9 @@ class Order(Base):
     id: int = Column(Integer, primary_key=True, index=True)
     user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
     client_name: str = Column(String(50), nullable=False)
+    phone: str = Column(String(9), nullable=False)
     address: str = Column(Text, nullable=False)
+    additional_info: str = Column(String(200), nullable=True)
     amount: float = Column(Float, nullable=False, default=0)
     created_at: datetime = Column(
         DateTime,
@@ -108,13 +118,16 @@ class Order(Base):
         "OrderItem", backref="order", cascade="all, delete-orphan"
     )
 
+    @property
+    def created_at_local(self):
+        return self.created_at + timedelta(hours=3)
+
 
 class OrderItem(Base):
     __tablename__ = "order_items"
     id: int = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"))
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"))
     product_id = Column(Integer, ForeignKey("products.id"))
     quantity = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)
     size = Column(String(10), nullable=False)
-
