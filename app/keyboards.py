@@ -150,7 +150,9 @@ async def create_product():
 async def cancel_admin_action(action=""):
     """
     вызов без аргумента -> "Отмена"
+
     "creation" -> "Отмена создания"
+
     "addition" -> "Отмена добавления"
     """
     keyboard = InlineKeyboardBuilder()
@@ -271,12 +273,23 @@ async def back_to_admin_list():
 #### ОПЛАТА ####
 
 
-async def cancel_payment():
+async def cancel_order(value=""):
+    """
+    Передаём value если нужны дополнительные поля
+
+    "change_street" -> "↩️ Повторно ввести улицу"
+    """
     keyboard = InlineKeyboardBuilder()
+    if value == "change_street":
+        keyboard.add(
+            InlineKeyboardButton(
+                text="↩️ Повторно ввести улицу", callback_data="change_street"
+            ),
+        )
     keyboard.add(
         InlineKeyboardButton(text="🛑 Отмена", callback_data="cart"),
     )
-    return keyboard.adjust().as_markup()
+    return keyboard.adjust(1).as_markup()
 
 
 async def pay_to_main():

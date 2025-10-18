@@ -108,11 +108,21 @@ class AsyncSQLiteDatabase:
                 print(f"Error adding product: {e}")
 
     async def add_order(
-        self, user_id, list_cart_items, client_name, phone, address_text, additional_info
+        self,
+        user_id,
+        list_cart_items,
+        client_name,
+        phone,
+        address_text,
+        additional_info,
     ):
         async with self.AsyncSession() as session:
             order = Order(
-                user_id=user_id, client_name=client_name, phone=phone, address=address_text, additional_info=additional_info
+                user_id=user_id,
+                client_name=client_name,
+                phone=phone,
+                address=address_text,
+                additional_info=additional_info,
             )
             total_amount = 0
             session.add(order)
@@ -152,9 +162,10 @@ class AsyncSQLiteDatabase:
     async def get_products(self):
         async with self.AsyncSession() as session:
             result = await session.execute(select(Product))
-            category_order = ["pizza", "snack", "drink", "cake"]
+            category_order = ["pizza", "snack", "cake", "drink"]
             return sorted(
-                result.scalars().all(), key=lambda x: category_order.index(x.category)
+                result.scalars().all(),
+                key=lambda x: (category_order.index(x.category), x.name.lower()),
             )
 
     async def get_orders(self, user_id):
