@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery, Message
 from redis.asyncio import Redis
 
 # from transliterate import translit
-import app.keyboards as kb
+import keyboards as kb
 from database.models import Product
 from database.sqlite_db import AsyncSQLiteDatabase
 
@@ -624,9 +624,9 @@ async def client(message: Message, state: FSMContext):
             reply_markup=await kb.cancel_order(),
         )
         return
-    elif len(client_name) > 50:
+    elif not 1 < len(client_name) < 50:
         await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Имя должно быть длиной до 50 символов.\n\nВведите ваше имя:",
+            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Имя должно быть длиной от 2 до 50 символов.\n\nВведите ваше имя:",
             reply_markup=await kb.cancel_order(),
         )
     else:
@@ -710,20 +710,32 @@ async def validate_street_api(street: str) -> tuple[str, bool]:
 
 @handlers_router.message(OrderStates.street)
 async def street(message: Message, state: FSMContext):
-    client_street = message.text
-    if not 2 < len(client_street) < 50:
+    street = message.text
+    if not 2 < len(street) < 50:
         await message.answer(
             "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Название улицы должно быть от 3 до 50 символов.\n\nВведите улицу:",
             reply_markup=await kb.cancel_order(),
         )
         return
-    elif client_street.isnumeric():
+    
+    elif street.isnumeric():
         await message.answer(
             "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Название улицы не должно содержать только цифры.\n\nВведите улицу:",
             reply_markup=await kb.cancel_order(),
         )
         return
-    street_validated, found = await validate_street_api(client_street)
+    
+    nums_count = sum(1 for с in street if с.isdigit())
+    if nums_count > 2:
+        await message.answer(
+            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! В названии улицы может быть не больше 2х цифр.\n\nВведите улицу:",
+            reply_markup=await kb.cancel_order(),
+        )
+        return
+    print(nums_count)
+        
+    print(nums_count)
+    street_validated, found = await validate_street_api(street)
     if not found:
         await message.answer(
             f"ОФОРМЛЕНИЕ ЗАКАЗА\n\n⚠️ Улица не найдена в базе, для уточнения вам перезвонит оператор либо нажмите кнопку ниже для повторного ввода.\nВыбрано: {street_validated}.\n\nВведите номер дома:",

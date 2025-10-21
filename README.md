@@ -12,7 +12,7 @@ git clone https://github.com/Deulix/Aiogram-Bot.git
 
 2. **Перейдите в папку проекта:**
 ```bash
-cd Aiogram-Bot
+cd '.\Aiogram Bot\'
 ```
 
 3. **Настройте переменные окружения:**
@@ -29,26 +29,46 @@ docker-compose up -d
 ## ⚙️ Конфигурация
 Перед запуском заполните .env файл:
 ```python
-BOT_TOKEN="your_bot_token_here" # ваш токен от @botfather в telegram
-ADMIN_ID="your_telegram_id" # ваш id в telegram
-REDIS_PORT=6379 # стандартный порт redis
-REDIS_URL="redis://redis:6379/0" # URL вашего Redis
+BOT_TOKEN=your_bot_token # Токен бота, полученный у BotFather
+ADMIN_ID=your_id # Ваш Telegram ID (нельзя лишить администрирования)
+REDIS_PORT=6379 # Стандартный порт redis
+REDIS_HOST="redis" # Стандартный хост redis
+DATABASE_URL="sqlite+aiosqlite:///your_db_path/your_db_name.db" # Путь к вашей async sqlite БД
+TEST_PAYMENT_KEY=your_test_payment_key # Тестовый ключ оплаты, полученный у BotFather
+MAPS_API_KEY=your_yandex_geocoder_api_key # API ключ для поиска улиц, полученный у Yandex
 ```
 ## 📁 Структура проекта
 ```bash
 Aiogram-Bot/
-├── app/
-│   ├── handlers/          # Обработчики сообщений
-│   ├── keyboards/         # Инлайн-клавиатуры   
-│   └── __init__.py
-├── database/
-│   ├── redis_db.py        # Redis DB
-│   ├── shop.db            # Volume базы данных sqlite  
-│   └── sqlite_db.py       # Async SQLite DB
-├── docker-compose.yml     # Docker конфигурация
-├── Dockerfile             # Образ Docker
-├── requirements.txt       # Зависимости Python
-└── .env.example           # Пример переменных окружения
+├── docker/
+│   ├── docker-compose.yml
+│   └── Dockerfile
+├── src/
+│   ├── alembic/
+│   │   ├── versions/
+│   │   ├── env.py
+│   │   ├── README
+│   │   └── script.py.mako
+│   ├── app/
+│   │   ├── bot/
+│   │   │   ├── handlers.py
+│   │   │   ├── keyboards.py
+│   │   │   └── payments.py
+│   │   ├── database/
+│   │   │   ├── models.py
+│   │   │   ├── redis_db.py
+│   │   │   ├── shop.db
+│   │   │   └── sqlite_db.py
+│   │   └── main.py
+│   └── tests/
+├── .dockerignore
+├── .env
+├── .env.example
+├── .gitignore
+├── alembic.ini
+├── pytest.ini
+├── README.md
+└── requirements.txt
 ```
 
 ## 🛠️ Технологии
@@ -56,11 +76,13 @@ Aiogram-Bot/
 
 ![](https://img.shields.io/badge/aiogram_3.21.0-blue?logo=telegram&logoColor=white) - современный фреймворк для Telegram ботов
 
-![](https://img.shields.io/badge/SQLAlchemy_2.0.43-orange) - работа с базой данных
+![](https://img.shields.io/badge/SQLAlchemy_2.x.x-orange) - работа с базой данных
 
 ![](https://img.shields.io/badge/Redis_7-red) - для хранения корзины клиента
 
 ![](https://img.shields.io/badge/Docker-blue) - контейнеризация приложения
+
+![](https://img.shields.io/badge/Alembic-blue) - контейнеризация приложения
 
 ## 📈 Особенности
 - Готовая структура для масштабирования
@@ -88,6 +110,6 @@ python -m app
 ## TODO
 - [x] CRUD для заказов, продуктов
 - [x] Корзина Redis
-- [ ] PostgreSQL
 - [ ] Тесты
 - [ ] Оплата (тестовая)
+- [ ] PostgreSQL

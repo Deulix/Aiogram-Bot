@@ -4,8 +4,8 @@ import os
 
 from aiogram import Bot, Dispatcher
 
-from app.handlers import handlers_router
-from app.payments import payments_router
+from bot.handlers import handlers_router
+from bot.payments import payments_router
 from database.redis_db import init_redis
 from database.sqlite_db import init_async_sqlite
 
