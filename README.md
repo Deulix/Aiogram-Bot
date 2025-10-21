@@ -76,11 +76,11 @@ Aiogram-Bot/
 
 ![](https://img.shields.io/badge/aiogram_3.21.0-blue?logo=telegram&logoColor=white) - современный фреймворк для Telegram ботов
 
-![](https://img.shields.io/badge/SQLAlchemy_2.x.x-orange) - работа с базой данных
+![](https://img.shields.io/badge/SQLAlchemy_2.x.x-orange?logo=sqlalchemy&logoColor=white) - работа с базой данных
 
-![](https://img.shields.io/badge/Redis_7-red) - для хранения корзины клиента
+![](https://img.shields.io/badge/Redis_7-red?logo=redis&logoColor=white) - для хранения корзины клиента
 
-![](https://img.shields.io/badge/Docker-blue) - контейнеризация приложения
+![](https://img.shields.io/badge/Docker-blue?logo=docker&logoColor=white) - контейнеризация приложения
 
 ![](https://img.shields.io/badge/Alembic-blue) - миграции баз данных
 
