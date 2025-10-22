@@ -30,7 +30,7 @@ docker-compose up -d
 Перед запуском заполните .env файл:
 ```python
 BOT_TOKEN=your_bot_token # Токен бота, полученный у BotFather
-ADMIN_ID=your_id # Ваш Telegram ID (нельзя лишить администрирования)
+ADMIN_ID=your_id # Telegram ID владельца (нельзя снять админку)
 REDIS_PORT=6379 # Стандартный порт redis
 REDIS_HOST="redis" # Стандартный хост redis
 DATABASE_URL="sqlite+aiosqlite:///your_db_path/your_db_name.db" # Путь к вашей async sqlite БД

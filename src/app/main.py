@@ -1,6 +1,6 @@
 import asyncio
 import logging
-import os
+from config.settings import settings
 
 from aiogram import Bot, Dispatcher
 
@@ -11,7 +11,7 @@ from database.sqlite_db import init_async_sqlite
 
 
 async def main():
-    bot = Bot(os.getenv("BOT_TOKEN"))
+    bot = Bot(settings.BOT_TOKEN)
     dp = Dispatcher()
     redis = await init_redis()
     sqlite_db = await init_async_sqlite()
