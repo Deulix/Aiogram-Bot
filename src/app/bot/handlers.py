@@ -1,5 +1,5 @@
 import logging
-from config.settings import settings
+import os
 import re
 
 import aiohttp
@@ -680,7 +680,7 @@ async def validate_street_api(street: str) -> tuple[str, bool]:
     try:
         url = "https://geocode-maps.yandex.ru/v1"
         params = {
-            "apikey": settings.MAPS_API_KEY,
+            "apikey": os.getenv("MAPS_API_KEY"),
             "geocode": f"{country}, {city}, {street}",
             "lang": "ru_RU",
             "results": 1,
@@ -717,14 +717,14 @@ async def street(message: Message, state: FSMContext):
             reply_markup=await kb.cancel_order(),
         )
         return
-
+    
     elif street.isnumeric():
         await message.answer(
             "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Название улицы не должно содержать только цифры.\n\nВведите улицу:",
             reply_markup=await kb.cancel_order(),
         )
         return
-
+    
     nums_count = sum(1 for с in street if с.isdigit())
     if nums_count > 2:
         await message.answer(
@@ -733,7 +733,7 @@ async def street(message: Message, state: FSMContext):
         )
         return
     print(nums_count)
-
+        
     print(nums_count)
     street_validated, found = await validate_street_api(street)
     if not found:

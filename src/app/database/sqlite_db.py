@@ -1,5 +1,4 @@
 import os
-from config.settings import settings
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -10,10 +9,11 @@ Base = declarative_base()
 
 
 class AsyncSQLiteDatabase:
-    def __init__(self, db_path: str = settings.DATABASE_URL.split("///")[1]): # всё что после /// в database_url
+    def __init__(self, db_path: str = "database/shop.db"):
+        import os
 
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        self.engine = create_async_engine(settings.DATABASE_URL)
+        self.engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
         self.AsyncSession = async_sessionmaker(
             self.engine, expire_on_commit=False, class_=AsyncSession
         )
@@ -35,7 +35,7 @@ class AsyncSQLiteDatabase:
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
-                    is_admin=(id == settings.ADMIN_ID),
+                    is_admin=(id == int(os.getenv("ADMIN_ID"))),
                 )
 
                 session.add(new_user)
@@ -65,7 +65,7 @@ class AsyncSQLiteDatabase:
                     db_user.first_name = tg_user.first_name
                     db_user.last_name = tg_user.last_name
 
-                if tg_user.id == settings.ADMIN_ID:
+                if tg_user.id == int(os.getenv("ADMIN_ID")):
                     db_user.is_admin = True
 
                 session.add(db_user)
