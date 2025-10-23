@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery, Message
 from redis.asyncio import Redis
 
 # from transliterate import translit
-import keyboards as kb
+from . import keyboards as kb
 from database.models import Product
 from database.sqlite_db import AsyncSQLiteDatabase
 

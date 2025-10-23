@@ -3,17 +3,14 @@ import os
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
-from database.models import User, Product, Order, OrderItem
+from .models import User, Product, Order, OrderItem
 
 Base = declarative_base()
 
 
 class AsyncSQLiteDatabase:
-    def __init__(self, db_path: str = "database/shop.db"):
-        import os
-
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        self.engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}")
+    def __init__(self, db_path: str = os.getenv("DATABASE_URL")):
+        self.engine = create_async_engine(db_path)
         self.AsyncSession = async_sessionmaker(
             self.engine, expire_on_commit=False, class_=AsyncSession
         )

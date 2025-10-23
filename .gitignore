@@ -2,3 +2,5 @@
 venv
 *.pyc
 1.ipynb
+__pycache__/
+*.db

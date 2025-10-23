@@ -17,7 +17,7 @@ services:
             - .env
         restart: unless-stopped
         volumes:
-            - ./database:/bot_app/database
+            - ./src/app/database:/bot_app/src/app/database
 
 volumes:
     redis_data:
