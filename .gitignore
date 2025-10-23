@@ -4,3 +4,4 @@ venv
 1.ipynb
 __pycache__/
 *.db
+.vscode/settings.json
