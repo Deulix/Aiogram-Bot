@@ -40,15 +40,13 @@ MAPS_API_KEY=your_yandex_geocoder_api_key # API ключ для поиска у�
 ## 📁 Структура проекта
 ```bash
 Aiogram-Bot/
-├── docker/
-│   ├── docker-compose.yml
-│   └── Dockerfile
+├── alembic/
+│   ├── versions/
+│   │   └── ...
+│   ├── env.py
+│   ├── README
+│   └── script.py.mako
 ├── src/
-│   ├── alembic/
-│   │   ├── versions/
-│   │   ├── env.py
-│   │   ├── README
-│   │   └── script.py.mako
 │   ├── app/
 │   │   ├── bot/
 │   │   │   ├── handlers.py
@@ -58,14 +56,18 @@ Aiogram-Bot/
 │   │   │   ├── models.py
 │   │   │   ├── redis_db.py
 │   │   │   ├── shop.db
+│   │   │   ├── sqlite_db_dump.sql
 │   │   │   └── sqlite_db.py
 │   │   └── main.py
 │   └── tests/
+│       └── ...
 ├── .dockerignore
 ├── .env
 ├── .env.example
 ├── .gitignore
 ├── alembic.ini
+├── docker-compose.yml
+├── Dockerfile
 ├── pytest.ini
 ├── README.md
 └── requirements.txt
@@ -110,6 +112,9 @@ python -m app
 ## TODO
 - [x] CRUD для заказов, продуктов
 - [x] Корзина Redis
+- [x] Админка через Telegram
 - [ ] Тесты
 - [ ] Оплата (тестовая)
+- [ ] Админка через FastAPI
 - [ ] PostgreSQL
+
