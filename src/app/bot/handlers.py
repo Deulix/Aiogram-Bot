@@ -1,5 +1,4 @@
 import logging
-import os
 import re
 from src.app.config.settings import settings
 import aiohttp
