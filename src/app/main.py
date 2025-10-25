@@ -1,9 +1,9 @@
 import asyncio
 import logging
-import os
+from .config.settings import settings
 
 from aiogram import Bot, Dispatcher
-
+from dotenv import load_dotenv
 from bot.handlers import handlers_router
 from bot.payments import payments_router
 from database.redis_db import init_redis
@@ -11,7 +11,8 @@ from database.sqlite_db import init_async_sqlite
 
 
 async def main():
-    bot = Bot(os.getenv("BOT_TOKEN"))
+    load_dotenv()
+    bot = Bot(settings.BOT_TOKEN)
     dp = Dispatcher()
     redis = await init_redis()
     sqlite_db = await init_async_sqlite()
