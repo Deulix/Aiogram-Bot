@@ -64,7 +64,6 @@ Aiogram-Bot/
 │   └── tests/
 │       └── ...
 ├── .dockerignore
-├── .env
 ├── .env.example
 ├── .gitignore
 ├── alembic.ini

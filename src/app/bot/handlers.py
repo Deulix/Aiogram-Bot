@@ -13,8 +13,8 @@ from redis.asyncio import Redis
 
 # from transliterate import translit
 from . import keyboards as kb
-from database.models import Product
-from database.sqlite_db import AsyncSQLiteDatabase
+from src.app.database.models import Product
+from src.app.database.sqlite_db import AsyncSQLiteDatabase
 
 handlers_router = Router()
 

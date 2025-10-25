@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from database.sqlite_db import Product, Order, User
+from src.app.database.sqlite_db import Product, Order, User
 
 
 async def main_menu():
