@@ -1,0 +1,34 @@
+# ======== BUILDER ========
+
+FROM python:3.13-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+
+WORKDIR /bot_app
+
+COPY prod-requirements.txt .
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends sqlite3 && \
+    python -m pip install --upgrade pip && \
+    python -m pip install --user --no-cache-dir -r prod-requirements.txt && \
+    rm -rf /var/lib/apt/lists/* /root/.cache/pip/
+
+# ======== RUNTIME ========
+
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /bot_app
+
+COPY --from=builder /root/.local /root/.local
+COPY src/ ./src/
+
+ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONPATH=/bot_app
+
+CMD ["python", "src/app/main.py"]

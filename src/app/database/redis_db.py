@@ -1,11 +1,12 @@
 import os
 from redis.asyncio import Redis
+from ..config.settings import settings
 
 
 async def init_redis():
     redis = Redis(
-        host=os.getenv("REDIS_HOST", "localhost"),
-        port=int(os.getenv("REDIS_PORT", 6379)),
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
         decode_responses=True,
     )
     try:

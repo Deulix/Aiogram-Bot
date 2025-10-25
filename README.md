@@ -3,7 +3,7 @@
 
 ## 🚀 Быстрый старт
 
-### Через Docker (рекомендуется)
+### Через Docker
 
 1. **Клонируйте репозиторий:**
 ```bash
@@ -52,6 +52,8 @@ Aiogram-Bot/
 │   │   │   ├── handlers.py
 │   │   │   ├── keyboards.py
 │   │   │   └── payments.py
+│   │   ├── config/
+│   │   │   └── settings.py
 │   │   ├── database/
 │   │   │   ├── models.py
 │   │   │   ├── redis_db.py
@@ -66,11 +68,13 @@ Aiogram-Bot/
 ├── .env.example
 ├── .gitignore
 ├── alembic.ini
+├── dev-requirements.txt
 ├── docker-compose.yml
-├── Dockerfile
+├── Dockerfile.dev
+├── Dockerfile.prod
+├── prod-requirements.txt
 ├── pytest.ini
-├── README.md
-└── requirements.txt
+└── README.md
 ```
 
 ## 🛠️ Технологии
@@ -98,16 +102,6 @@ Aiogram-Bot/
 - Асинхронная архитектура
 
 - Легкая кастомизация
-
-## 🐛 Разработка
-Для разработки без Docker:
-```bash
-python -m venv venv
-source venv/bin/activate        # Linux/Mac
-venv\Scripts\activate           # Windows
-pip install -r requirements.txt
-python -m app
-```
 
 ## TODO
 - [x] CRUD для заказов, продуктов
