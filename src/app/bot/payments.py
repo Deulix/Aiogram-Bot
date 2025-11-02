@@ -16,20 +16,16 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 
 payments_router = Router()
 
-
-@payments_router.message(Command("testpayment"))
-async def payment(message: Message, db: AsyncSQLiteDatabase):
-    order = await db.get_order_by_id(1)
-    order_items = await db.get_order_items(1)
-    print(order_items)
+@payments_router.callback_query(F.data == "test_payment_link")
+async def payment(message: Message):
     prices = [
-        LabeledPrice(label="Пицца тест", amount=50000),
-        LabeledPrice(label="Доставка тест", amount=2000),
+        LabeledPrice(label="Пицца ТЕСТ", amount=50000),
+        LabeledPrice(label="Доставка ТЕСТ", amount=2000),
     ]
     await message.bot.send_invoice(
         chat_id=message.from_user.id,
-        title="Заказ пиццы тест",
-        description="Пицца c доставкой тест",
+        title="Заказ пиццы ТЕСТ",
+        description="Пицца c доставкой ТЕСТ",
         payload="order_123",
         provider_token=settings.TEST_PAYMENT_KEY,
         currency="byn",

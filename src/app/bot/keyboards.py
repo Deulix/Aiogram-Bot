@@ -4,7 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from src.app.database.sqlite_db import Product, Order, User
 
 
-async def main_menu():
+async def main_menu(user: User):
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
         InlineKeyboardButton(text="📋 Каталог", callback_data="catalog"),
@@ -12,7 +12,9 @@ async def main_menu():
         InlineKeyboardButton(text="🛒 Корзина", callback_data="cart"),
         InlineKeyboardButton(text="📞 Контакты", callback_data="contacts"),
     )
-    return keyboard.adjust(1, 1, 2).as_markup()
+    if user.is_admin:
+        keyboard.add(InlineKeyboardButton(text="👺 АДМИНПАНЕЛЬ", callback_data="admin"))
+    return keyboard.adjust(1, 1, 2, 1).as_markup()
 
 
 async def catalog():
@@ -125,6 +127,7 @@ async def admin():
         InlineKeyboardButton(
             text="🛑 Права суперпользователя 🛑", callback_data="admin_list"
         ),
+        InlineKeyboardButton(text="🛠️ Тесты", callback_data="tests"),
         InlineKeyboardButton(text="👤 В меню пользователя", callback_data="main menu"),
     )
     return keyboard.adjust(1).as_markup()
@@ -149,9 +152,17 @@ async def cancel_admin_action(action=""):
     "creation" -> "Отмена создания"
 
     "addition" -> "Отмена добавления"
+
+    "edit" -> "Отмена изменения"
+
     """
     keyboard = InlineKeyboardBuilder()
-    text_map = {"": "", "creation": "создания", "addition": "добавления"}
+    text_map = {
+        "": "",
+        "creation": "создания",
+        "addition": "добавления",
+        "edit": "изменения",
+    }
     keyboard.add(
         InlineKeyboardButton(
             text=f"🛑 Отмена {text_map[action]}", callback_data="admin"
@@ -171,7 +182,7 @@ async def admin_list(admins: list[User], callback_user: User):
         InlineKeyboardButton(
             text="Добавить нового администратора", callback_data="admin_create"
         ),
-        InlineKeyboardButton(text="Назад", callback_data="admin"),
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"),
     )
     return keyboard.adjust(1).as_markup()
 
@@ -222,31 +233,31 @@ async def product_edit_choose(product: Product):
     keyboard.add(
         InlineKeyboardButton(
             text=f"НАЗВАНИЕ ({product.name})",
-            callback_data=f"product_value_edit_name_{product.id}",
+            callback_data=f"product_parameter_edit_name_{product.id}",
         ),
         InlineKeyboardButton(
             text=f"ЦЕНА ЗА СТАНДАРТ ({product.price_small} BYN)",
-            callback_data=f"product_value_edit_price_small_{product.id}",
+            callback_data=f"product_parameter_edit_price-small_{product.id}",
         ),
         InlineKeyboardButton(
             text=f"ЦЕНА ЗА БОЛЬШОЙ(УЮ) ({f'{product.price_large} BYN' if product.price_large else "---"})",
-            callback_data=f"product_value_edit_price_large_{product.id}",
+            callback_data=f"product_parameter_edit_price-large_{product.id}",
         ),
         InlineKeyboardButton(
             text=f"КАТЕГОРИЯ ({product.emoji} {product.category_rus})",
-            callback_data=f"product_value_edit_category_{product.id}",
+            callback_data=f"product_parameter_edit_category_{product.id}",
         ),
         InlineKeyboardButton(
             text=f"ОПИСАНИЕ ({product.description or "---"})",
-            callback_data=f"product_value_edit_description_{product.id}",
+            callback_data=f"product_parameter_edit_description_{product.id}",
         ),
         InlineKeyboardButton(
             text=f"ИНГРЕДИЕНТЫ ({product.ingredients or "---"})",
-            callback_data=f"product_value_edit_ingredients_{product.id}",
+            callback_data=f"product_parameter_edit_ingredients_{product.id}",
         ),
         InlineKeyboardButton(
             text=f"КБЖУ ({product.nutrition or "---"})",
-            callback_data=f"product_value_edit_nutrition_{product.id}",
+            callback_data=f"product_parameter_edit_nutrition_{product.id}",
         ),
     )
 
@@ -259,10 +270,17 @@ async def product_edit_choose(product: Product):
     return keyboard.as_markup()
 
 
-async def back_to_admin_list():
+async def back_to_admin_list(can_dismiss, admin_id):
     keyboard = InlineKeyboardBuilder()
+    if can_dismiss:
+        keyboard.add(
+            InlineKeyboardButton(
+                text="❌ Лишить прав администратора",
+                callback_data=f"dismiss_admin_{admin_id}",
+            )
+        )
     keyboard.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_list"))
-    return keyboard.adjust().as_markup()
+    return keyboard.adjust(1).as_markup()
 
 
 #### ОПЛАТА ####
@@ -292,11 +310,7 @@ async def cancel_order(value=""):
 
 async def orders(orders: list[Order]):
     keyboard = InlineKeyboardBuilder()
-    mark = {
-        "done":"✅",
-        "pending":"⚠️",
-        "cancelled":"❌"
-    }
+    mark = {"done": "✅", "pending": "⚠️", "cancelled": "❌"}
     for order in orders:
         keyboard.add(
             InlineKeyboardButton(
@@ -319,12 +333,14 @@ async def orders(orders: list[Order]):
     return keyboard.as_markup()
 
 
-async def order_info(order:Order):
+async def order_info(order: Order):
     keyboard = InlineKeyboardBuilder()
     if order.status == "pending":
         keyboard.row(
-        InlineKeyboardButton(text="✅ Оплатить заказ", callback_data=f"payment_link_{order.id}"),
-    )
+            InlineKeyboardButton(
+                text="✅ Оплатить заказ", callback_data=f"payment_link_{order.id}"
+            ),
+        )
     keyboard.row(
         InlineKeyboardButton(text="⬅️ Назад", callback_data="orders"),
     )
@@ -333,12 +349,31 @@ async def order_info(order:Order):
     )
     return keyboard.adjust(1).as_markup()
 
+
 async def order_confirm(order_id):
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
-        InlineKeyboardButton(text="✅ Оплатить заказ", callback_data=f"payment_link_{order_id}"),
+        InlineKeyboardButton(
+            text="✅ Оплатить заказ", callback_data=f"payment_link_{order_id}"
+        ),
     )
     keyboard.row(
         InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
     )
     return keyboard.adjust(2).as_markup()
+
+
+async def tests():
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(
+        InlineKeyboardButton(
+            text="Проверить соединение с БД", callback_data=f"db_check"
+        ),
+        InlineKeyboardButton(
+            text="Тестовый платёж", callback_data=f"test_payment_link"
+        ),
+    )
+    keyboard.row(
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"),
+    )
+    return keyboard.adjust(1).as_markup()

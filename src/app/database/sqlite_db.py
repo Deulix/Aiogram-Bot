@@ -1,5 +1,3 @@
-import os
-
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -149,6 +147,14 @@ class AsyncSQLiteDatabase:
             user.is_admin = True
             await session.commit()
 
+    async def dismiss_admin(self, user_id):
+        async with self.AsyncSession() as session:
+            user = await session.get(User, user_id)
+            if not user:
+                return
+            user.is_admin = False
+            await session.commit()
+
     async def get_admins(self):
         async with self.AsyncSession() as session:
             stmt = select(User).where(User.is_admin == True)
@@ -198,7 +204,7 @@ class AsyncSQLiteDatabase:
             else:
                 stmt = select(Product).where(Product.category == category)
             result = await session.execute(stmt)
-            products:list[Product] = result.scalars().all()
+            products: list[Product] = result.scalars().all()
             products.sort(key=lambda x: x.category, reverse=True)
             return products
 
@@ -234,6 +240,13 @@ class AsyncSQLiteDatabase:
             product = await session.get(Product, product_id)
             await session.delete(product)
             await session.commit()
+
+    async def edit_product(self, product_id, product_parameter, new_parameter_value):
+        async with self.AsyncSession() as session:
+            product = await session.get(Product, product_id)
+            setattr(product, product_parameter, new_parameter_value)
+            await session.commit()
+
 
 
 async def init_async_sqlite():
