@@ -141,15 +141,13 @@ class AsyncSQLiteDatabase:
             await session.commit()
             return order
 
-    async def toggle_admin(self, user_id):
+    async def make_admin(self, user_id):
         async with self.AsyncSession() as session:
-            user = await self.get_user_by_id(user_id)
+            user = await session.get(User, user_id)
             if not user:
-                return None
-            value = not user.is_admin
-            user.is_admin = value
+                return
+            user.is_admin = True
             await session.commit()
-            return value
 
     async def get_admins(self):
         async with self.AsyncSession() as session:
@@ -166,7 +164,7 @@ class AsyncSQLiteDatabase:
                 key=lambda x: (category_order.index(x.category), x.name.lower()),
             )
 
-    async def get_orders(self, user_id):
+    async def get_orders_by_user(self, user_id):
         async with self.AsyncSession() as session:
             stmt = select(Order).where(Order.user_id == user_id)
             result = await session.execute(stmt)
@@ -195,11 +193,32 @@ class AsyncSQLiteDatabase:
 
     async def get_products_by_category(self, category: str):
         async with self.AsyncSession() as session:
-            stmt = select(Product).where(Product.category == category)
-            if category == "snack":
-                stmt = select(Product).where(Product.category.in_([category, "snack"]))
+            if category in ["cake", "snack"]:
+                stmt = select(Product).where(Product.category.in_(["cake", "snack"]))
+            else:
+                stmt = select(Product).where(Product.category == category)
             result = await session.execute(stmt)
-            return result.scalars().all()
+            products:list[Product] = result.scalars().all()
+            products.sort(key=lambda x: x.category, reverse=True)
+            return products
+
+    async def order_set_pending(self, order_id):
+        async with self.AsyncSession() as session:
+            order = await session.get(Order, order_id)
+            order.status = "pending"
+            await session.commit()
+
+    async def order_set_done(self, order_id):
+        async with self.AsyncSession() as session:
+            order = await session.get(Order, order_id)
+            order.status = "done"
+            await session.commit()
+
+    async def order_set_cancelled(self, order_id):
+        async with self.AsyncSession() as session:
+            order = await session.get(Order, order_id)
+            order.status = "cancelled"
+            await session.commit()
 
     async def check_connection(self):
         try:
@@ -212,7 +231,7 @@ class AsyncSQLiteDatabase:
 
     async def delete_product(self, product_id):
         async with self.AsyncSession() as session:
-            product = await self.get_product_by_id(product_id)
+            product = await session.get(Product, product_id)
             await session.delete(product)
             await session.commit()
 

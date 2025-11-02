@@ -1,5 +1,3 @@
-from app.database.models import Order, OrderItem, Product, User
-from app.bot.handlers import Cart
 import pytest
 
 

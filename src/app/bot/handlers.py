@@ -1,6 +1,6 @@
 import logging
 import re
-from src.app.config.settings import settings
+
 import aiohttp
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
@@ -11,10 +11,12 @@ from aiogram.types import CallbackQuery, Message
 # from pydantic import BaseModel
 from redis.asyncio import Redis
 
-# from transliterate import translit
-from . import keyboards as kb
+from src.app.config.settings import settings
 from src.app.database.models import Product
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
+
+# from transliterate import translit
+from . import keyboards as kb
 
 handlers_router = Router()
 
@@ -36,7 +38,7 @@ async def cmd_start(message: Message, db: AsyncSQLiteDatabase, state: FSMContext
     else:
         db_user = await db.update_user(tg_user)
 
-    adm_txt = "/admin\n" if db_user.is_admin else ""
+    adm_txt = "/admin\n/testpayment\n/db\n" if db_user.is_admin else ""
 
     await message.answer(
         f"{adm_txt}Привет, {db_user.first_name}! Выбери пункт меню:",
@@ -51,7 +53,7 @@ async def cmd_main_menu(
     await state.clear()
     tg_user = callback.from_user
     db_user = await db.update_user(tg_user)
-    adm_txt = "/admin\n" if db_user.is_admin else ""
+    adm_txt = "/admin\n/testpayment\n/db\n" if db_user.is_admin else ""
     await callback.message.edit_text(
         f"{adm_txt}Привет, {db_user.first_name}! Выбери пункт меню:",
         reply_markup=await kb.main_menu(),
@@ -69,8 +71,6 @@ async def cmd_category_menu(
         cart_amount = await cart.get_current_amount()
     except:
         cart_amount = None
-    if category == "snack":
-        products.extend(await db.get_products_by_category("cake"))
     await callback.message.edit_text(
         (
             f"{"Стандарт: ~ 650 грамм, 29 см\nБольшая: ~ 850 грамм, 36 см\n\n" if category == "pizza" else ""}{f"Общая стоимость корзины: {cart_amount:.2f} BYN\n\n" if cart_amount else ""}Для продолжения заказа выбери пункт меню:"
@@ -149,8 +149,6 @@ async def cmd_add_to_cart(
     await cart.increase_prod_count(full_callback)
     quantity += 1
     products: list[Product] = await db.get_products_by_category(product.category)
-    if product.category == "snack":
-        products.extend(await db.get_products_by_category("cake"))
     text = f"{product.category_rus.capitalize()} {product.name} {product.large_size_text if size == "large" else product.small_size_text} ({quantity} шт) добавлен(а) в корзину"
 
     # logger.info(
@@ -312,7 +310,7 @@ async def cmd_handle_redis(message: Message, redis: Redis, db: AsyncSQLiteDataba
         redis_result = await redis.get("REDIS_STATUS")
         sqlite_result = await db.check_connection()
         await message.answer(
-            f"/admin\nREDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
+            f"/admin\n/testpayment\n/db\nREDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}"
         )
         await redis.delete("REDIS_STATUS")
     else:
@@ -568,7 +566,7 @@ async def input_admin_id(callback: CallbackQuery, state: FSMContext):
 
 
 @handlers_router.message(AdminCreation.create)
-async def toggle_admin(message: Message, state: FSMContext, db: AsyncSQLiteDatabase):
+async def make_admin(message: Message, state: FSMContext, db: AsyncSQLiteDatabase):
     admin_id = message.text
     admin = await db.get_user_by_id(admin_id)
     if not admin:
@@ -582,7 +580,7 @@ async def toggle_admin(message: Message, state: FSMContext, db: AsyncSQLiteDatab
             reply_markup=await kb.cancel_admin_action(),
         )
     else:
-        await db.toggle_admin(admin_id)
+        await db.make_admin(admin_id)
         await message.answer(
             f"ДОБАВЛЕНИЕ АДМИНИСТРАТОРА:\n\n✅ Новый администратор (ID{admin_id}) успешно добавлен.",
             reply_markup=await kb.admin(),
@@ -628,6 +626,7 @@ async def client(message: Message, state: FSMContext):
             "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Имя должно быть длиной от 2 до 50 символов.\n\nВведите ваше имя:",
             reply_markup=await kb.cancel_order(),
         )
+        return
     else:
         await state.update_data(client_name=client_name)
 
@@ -640,7 +639,7 @@ async def client(message: Message, state: FSMContext):
 
 @handlers_router.callback_query(F.data == "change_street")
 @handlers_router.message(OrderStates.phone)
-async def client(event: Message | CallbackQuery, state: FSMContext):
+async def phone(event: Message | CallbackQuery, state: FSMContext):
     if isinstance(event, Message):
         client_phone = event.text
         operators_codes = ("25", "29", "33", "44")
@@ -650,11 +649,13 @@ async def client(event: Message | CallbackQuery, state: FSMContext):
                 f"ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер телефона должен быть в формате XX1234567, где XX ваш код оператора (для Беларуси {", ".join(operators_codes)}).\n✅ Пример: 291234567\n\nВведите ваш номер телефона:",
                 reply_markup=await kb.cancel_order(),
             )
+            return
         elif not operator_code_verified:
             await event.answer(
                 f"ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Неверный код оператора.\nАктуальные коды: {", ".join(operators_codes)}\n✅ Пример: 291234567\n\nВведите ваш номер телефона:",
                 reply_markup=await kb.cancel_order(),
             )
+            return
 
         else:
             await state.update_data(phone=client_phone)
@@ -731,9 +732,7 @@ async def street(message: Message, state: FSMContext):
             reply_markup=await kb.cancel_order(),
         )
         return
-    print(nums_count)
 
-    print(nums_count)
     street_validated, found = await validate_street_api(street)
     if not found:
         await message.answer(
@@ -753,85 +752,106 @@ async def street(message: Message, state: FSMContext):
 @handlers_router.message(OrderStates.house)
 async def house(message: Message, state: FSMContext):
     house = message.text
-    if 0 < int(house) < 300:
+    if not house.isdecimal():
         await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер дома должен быть от 1 до 300.\nВведите номер дома или /skip для пропуска:",
+            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер дома должен быть числовым значением.\nВведите номер дома:",
             reply_markup=await kb.cancel_order(),
         )
+        return
+
+    elif int(house) not in range(1, 300):
+        await message.answer(
+            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер дома должен быть от 1 до 300.\nВведите номер дома:",
+            reply_markup=await kb.cancel_order(),
+        )
+        return
     else:
         await state.update_data(house=house)
 
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите номер квартиры или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
-        await state.set_state(OrderStates.apartment)
+    await message.answer(
+        "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите номер квартиры или /skip для пропуска:",
+        reply_markup=await kb.cancel_order(),
+    )
+    await state.set_state(OrderStates.apartment)
 
 
 @handlers_router.message(OrderStates.apartment)
 async def apartment(message: Message, state: FSMContext):
     apartment = message.text
-    if not apartment.isdecimal():
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер квартиры должен быть от 1 до 1000.\nВведите номер квартиры или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
-
-    elif not 0 < int(apartment) < 1000:
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер квартиры должен быть от 1 до 1000.\nВведите номер квартиры или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
+    if apartment == "/skip":
+        await state.update_data(apartment=None)
     else:
-        await state.update_data(apartment=apartment if apartment != "/skip" else None)
+        if not apartment.isdecimal():
+            await message.answer(
+                "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер квартиры должен быть от 1 до 1000.\nВведите номер квартиры или /skip для пропуска:",
+                reply_markup=await kb.cancel_order(),
+            )
+            return
 
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите этаж или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
-        await state.set_state(OrderStates.floor)
+        elif int(apartment) not in range(1, 1000):
+            await message.answer(
+                "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер квартиры должен быть от 1 до 1000.\nВведите номер квартиры или /skip для пропуска:",
+                reply_markup=await kb.cancel_order(),
+            )
+            return
+        else:
+            await state.update_data(apartment=apartment)
+
+    await message.answer(
+        "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите этаж или /skip для пропуска:",
+        reply_markup=await kb.cancel_order(),
+    )
+    await state.set_state(OrderStates.floor)
 
 
 @handlers_router.message(OrderStates.floor)
 async def floor(message: Message, state: FSMContext):
     floor = message.text
-    if not floor.isdecimal():
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Этаж должен быть от 1 до 50.\nВведите номер квартиры или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
-        return
-    elif 1 < int(floor) < 50:
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Этаж должен быть от 1 до 50.\nВведите номер квартиры или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
+    if floor == "/skip":
+        await state.update_data(floor=None)
     else:
-        await state.update_data(floor=floor if floor != "/skip" else None)
+        if not floor.isdecimal():
+            await message.answer(
+                "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Этаж должен быть числовым значением.\nВведите номер квартиры или /skip для пропуска:",
+                reply_markup=await kb.cancel_order(),
+            )
+            return
+        elif int(floor) not in range(1, 50):
+            await message.answer(
+                "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Этаж должен быть от 1 до 50.\nВведите номер квартиры или /skip для пропуска:",
+                reply_markup=await kb.cancel_order(),
+            )
+            return
+        else:
+            await state.update_data(floor=floor)
 
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите номер подъезда или /skip для пропуска",
-            reply_markup=await kb.cancel_order(),
-        )
-        await state.set_state(OrderStates.entrance)
+    await message.answer(
+        "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите номер подъезда или /skip для пропуска",
+        reply_markup=await kb.cancel_order(),
+    )
+    await state.set_state(OrderStates.entrance)
 
 
 @handlers_router.message(OrderStates.entrance)
 async def entrance(message: Message, state: FSMContext):
     entrance = message.text
-    if not entrance.isdecimal():
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер подъезда должен быть от 1 до 30.\nВведите номер подъезда или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
-        return
-    elif 1 < int(entrance) < 30:
-        await message.answer(
-            "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер подъезда должен быть от 1 до 30.\nВведите номер подъезда или /skip для пропуска:",
-            reply_markup=await kb.cancel_order(),
-        )
+    if entrance == "/skip":
+        await state.update_data(entrance=None)
+    else:
+        if not entrance.isdecimal():
+            await message.answer(
+                "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер подъезда должен быть числовым значением.\nВведите номер подъезда или /skip для пропуска:",
+                reply_markup=await kb.cancel_order(),
+            )
+            return
+        elif int(entrance) not in range(1, 30):
+            await message.answer(
+                "ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер подъезда должен быть от 1 до 30.\nВведите номер подъезда или /skip для пропуска:",
+                reply_markup=await kb.cancel_order(),
+            )
+            return
 
-    await state.update_data(entrance=entrance if entrance != "/skip" else None)
+        await state.update_data(entrance=entrance)
 
     await message.answer(
         "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите дополнительную информацию\n/skip для пропуска",
@@ -889,17 +909,16 @@ async def additional_info(
         additional_info,
     )
     message_parts = [
-        f"✅ Спасибо, заказ #{order.id} оформлен!\n",
+        f"⚠️ Сформирован заказ #{order.id}. Проверьте перед оплатой!\n",
         cart_text_normalized,
         f"СТОИМОСТЬ {amount:.2f} BYN\n",
         client_text,
         f"Адрес: {address_text}",
         f"\nДоп инфо: {additional_info}" if additional_info else "",
-        'Посмотреть статус заказа можно в меню "Мои заказы"',
     ]
     await message.answer(
         "\n".join(message_parts),
-        reply_markup=await kb.pay_to_main(),
+        reply_markup=await kb.order_confirm(order.id),
     )
     await state.clear()
     await cart.clear()
@@ -911,7 +930,7 @@ async def additional_info(
 @handlers_router.callback_query(F.data == "orders")
 async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     user_id = callback.from_user.id
-    orders = await db.get_orders(user_id)
+    orders = await db.get_orders_by_user(user_id)
     await callback.message.edit_text(
         "СПИСОК ЗАКАЗОВ:" if orders else "Список заказов пуст.",
         reply_markup=await kb.orders(orders),
@@ -936,10 +955,15 @@ async def order_by_id(callback: CallbackQuery, db: AsyncSQLiteDatabase):
             f"{emoji[0]} {name} {size_text} - {quantity} шт. -- {(price*quantity):.2f} BYN\n"
         )
     order_items_normalized = "".join(order_items_text)
+    mark = {
+        "done":"✅ Оплачен",
+        "pending":"⚠️ Ожидает оплаты",
+        "cancelled":"❌ Отменён"
+    }
     await callback.message.edit_text(
-        f"ЗАКАЗ #{order.id} от {order.created_at_local}:\n\n{order_items_normalized}\nСТОИМОСТЬ: {order.amount:.2f} BYN\n\nИмя: {order.client_name}\nТелефон: +375{order.phone}\nАдрес: {order.address}\n"
+        f"{mark[order.status]}\nЗАКАЗ #{order.id} от {order.created_at_local}:\n\n{order_items_normalized}\nСТОИМОСТЬ: {order.amount:.2f} BYN\n\nИмя: {order.client_name}\nТелефон: +375{order.phone}\nАдрес: {order.address}\n"
         + ((f"Доп инфо: {order.additional_info}") if order.additional_info else ""),
-        reply_markup=await kb.order_info(),
+        reply_markup=await kb.order_info(order),
     )
 
 
@@ -952,12 +976,12 @@ async def handle_answer(message: Message):
     await message.answer("Я удалил твоё сообщение, и что ты мне сделаешь?")
 
 
-@handlers_router.message(F.text)
-async def handle_answer(message: Message):
-    await message.answer(
-        f"Я умею отвечать только на меню. Выбери пункт ниже:",
-        reply_markup=await kb.main_menu(),
-    )
+# @handlers_router.message(F.text)
+# async def handle_answer(message: Message):
+#     await message.answer(
+#         f"Я умею отвечать только на меню. Выбери пункт ниже:",
+#         reply_markup=await kb.main_menu(),
+#     )
 
 
 @handlers_router.callback_query(F.data.startswith("info_"))

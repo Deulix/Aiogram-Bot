@@ -112,11 +112,12 @@ class Order(Base):
         default=func.now(),
         nullable=False,
     )
-
+    status: str = Column(String(20), nullable=False, default="pending")
     user = relationship("User", backref="orders")
     order_items = relationship(
         "OrderItem", backref="order", cascade="all, delete-orphan"
     )
+
 
     @property
     def created_at_local(self):

@@ -261,7 +261,7 @@ async def product_edit_choose(product: Product):
 
 async def back_to_admin_list():
     keyboard = InlineKeyboardBuilder()
-    keyboard.add(InlineKeyboardButton(text="Назад", callback_data="admin_list"))
+    keyboard.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_list"))
     return keyboard.adjust().as_markup()
 
 
@@ -287,34 +287,30 @@ async def cancel_order(value=""):
     return keyboard.adjust(1).as_markup()
 
 
-async def pay_to_main():
-    keyboard = InlineKeyboardBuilder()
-    keyboard.add(
-        InlineKeyboardButton(text="Мои заказы", callback_data="orders"),
-        InlineKeyboardButton(text="В главное меню", callback_data="main menu"),
-    )
-    return keyboard.adjust(1).as_markup()
-
-
 #### ЗАКАЗЫ ####
 
 
 async def orders(orders: list[Order]):
     keyboard = InlineKeyboardBuilder()
+    mark = {
+        "done":"✅",
+        "pending":"⚠️",
+        "cancelled":"❌"
+    }
     for order in orders:
         keyboard.add(
             InlineKeyboardButton(
-                text=f"Заказ #{order.id} от {order.created_at_local}",
+                text=f"{mark[order.status]} Заказ #{order.id} от {order.created_at_local}",
                 callback_data=f"order_{order.id}",
             )
         )
     keyboard.adjust(1)
     if not orders:
         keyboard.row(
-            InlineKeyboardButton(text="Каталог", callback_data="catalog"),
+            InlineKeyboardButton(text="📋 Каталог", callback_data="catalog"),
         )
         keyboard.row(
-            InlineKeyboardButton(text="Главное меню", callback_data="main menu"),
+            InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
         )
     else:
         keyboard.row(
@@ -323,12 +319,26 @@ async def orders(orders: list[Order]):
     return keyboard.as_markup()
 
 
-async def order_info():
+async def order_info(order:Order):
     keyboard = InlineKeyboardBuilder()
+    if order.status == "pending":
+        keyboard.row(
+        InlineKeyboardButton(text="✅ Оплатить заказ", callback_data=f"payment_link_{order.id}"),
+    )
     keyboard.row(
         InlineKeyboardButton(text="⬅️ Назад", callback_data="orders"),
     )
     keyboard.row(
         InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
     )
-    return keyboard.as_markup()
+    return keyboard.adjust(1).as_markup()
+
+async def order_confirm(order_id):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(
+        InlineKeyboardButton(text="✅ Оплатить заказ", callback_data=f"payment_link_{order_id}"),
+    )
+    keyboard.row(
+        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
+    )
+    return keyboard.adjust(2).as_markup()
