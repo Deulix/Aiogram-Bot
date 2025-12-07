@@ -1,10 +1,7 @@
-import logging
-
+from loguru import logger
 from redis.asyncio import Redis
 
 from src.app.config.settings import settings
-
-logger = logging.getLogger(__name__)
 
 
 async def init_redis() -> Redis | None:
@@ -15,8 +12,8 @@ async def init_redis() -> Redis | None:
     )
     try:
         await redis.ping()
-        logger.info("REDIS CONNECTED")
+        logger.info("Соединение с Redis активно")
         return redis
     except Exception as e:
-        logger.error(f"CONNECTION DENIED: {e}")
+        logger.error(f"Ошибка при соединении с Redis: {e}")
         raise

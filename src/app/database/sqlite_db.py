@@ -1,14 +1,12 @@
-import logging
 from typing import Self
 
+from loguru import logger
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.app.config.settings import settings
 
 from .models import Order, OrderItem, Product, User
-
-logger = logging.getLogger(__name__)
 
 
 class AsyncSQLiteDatabase:
@@ -43,7 +41,7 @@ class AsyncSQLiteDatabase:
 
             except Exception as e:
                 await session.rollback()
-                logger.error(f"Ошибка при добавлении пользователя: {e}")
+                logger.error(f" Ошибка при добавлении пользователя: {e}")
         return new_user
 
     from aiogram.types import User as TgUser
@@ -71,7 +69,7 @@ class AsyncSQLiteDatabase:
                 return db_user
             except Exception as e:
                 await session.rollback()
-                logger.error(f"Ошибка при обновлении пользователя: {e}")
+                logger.error(f" Ошибка при обновлении пользователя: {e}")
 
     async def add_product(
         self,
@@ -104,7 +102,7 @@ class AsyncSQLiteDatabase:
 
             except Exception as e:
                 await session.rollback()
-                logger.error(f"Ошибка при добавлении продукта: {e}")
+                logger.error(f" Ошибка при добавлении продукта: {e}")
 
     async def add_order(
         self,
@@ -144,7 +142,7 @@ class AsyncSQLiteDatabase:
                 return order
             except Exception as e:
                 await session.rollback()
-                logger.error(f"Ошибка при добавлении заказа: {e}")
+                logger.error(f" Ошибка при добавлении заказа: {e}")
 
     async def make_admin(self, user_id) -> None:
         async with self.AsyncSession() as session:

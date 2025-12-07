@@ -5,13 +5,13 @@ services:
         volumes:
             - redis_data:/data
         restart: unless-stopped
+        command: redis-server --loglevel warning
         env_file:
             - .env
 
     aiobot:
         build:
             context: .
-            dockerfile: Dockerfile.dev
         container_name: aiobot
         depends_on:
             - redis
@@ -20,6 +20,7 @@ services:
         restart: unless-stopped
         volumes:
             - ./src/app/database:/bot_app/src/app/database
+            - ./logs:/bot_app/logs/
 
 volumes:
     redis_data:

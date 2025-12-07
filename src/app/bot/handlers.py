@@ -1,4 +1,3 @@
-import logging
 import re
 
 import aiohttp
@@ -18,9 +17,6 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 from . import keyboards as kb
 
 handlers_router = Router()
-
-logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
-logger = logging.getLogger(__name__)
 
 
 @handlers_router.message(CommandStart())
@@ -146,10 +142,6 @@ async def cmd_add_to_cart(
     quantity += 1
     products: list[Product] = await db.get_products_by_category(product.category)
     text = f"{product.category_rus.capitalize()} {product.name} {product.large_size_text if size == 'large' else product.small_size_text} ({quantity} шт) добавлен(а) в корзину"
-
-    # logger.info(
-    #     f"***User {user_id} added {product.name} to cart with size {size} and quantity {quantity}***"
-    # )
     await cart.add_amount(product.get_size_price(size))
     cart_amount = await cart.get_current_amount()
     await callback.message.edit_text(
@@ -525,7 +517,7 @@ async def cmd_product_edit_choose(
 
 
 @handlers_router.callback_query(F.data.startswith("product_parameter_edit_"))
-async def cmd_product_edit_choose(callback: CallbackQuery, state: FSMContext):
+async def cmd_product_edit_choose(callback: CallbackQuery, state: FSMContext):  # noqa: F811
     parts = callback.data.split("_")
     product_id = parts[-1]
     product_parameter = parts[-2].replace("-", "_")

@@ -1,0 +1,17 @@
+2025-12-07 18:56:07.598 | INFO     | __main__:main:37 - Логирование запущено
+2025-12-07 18:56:07.619 | INFO     | src.app.database.redis_db:init_redis:15 - Соединение с Redis активно
+2025-12-07 18:56:07.660 | INFO     | src.app.database.sqlite_db:check_connection:238 - Соединение с SQLite активно
+2025-12-07 18:56:07.661 | INFO     | __main__:main:46 - Все сервисы запущены
+2025-12-07 19:07:47.002 | INFO     | __main__:main:37 - Логирование запущено
+2025-12-07 19:07:47.024 | INFO     | src.app.database.redis_db:init_redis:15 - Соединение с Redis активно
+2025-12-07 19:07:47.060 | INFO     | src.app.database.sqlite_db:check_connection:238 - Соединение с SQLite активно
+2025-12-07 19:07:47.062 | INFO     | __main__:main:46 - Все сервисы запущены
+2025-12-07 19:08:11.196 | INFO     | __main__:main:37 - Логирование запущено
+2025-12-07 19:08:11.212 | INFO     | src.app.database.redis_db:init_redis:15 - Соединение с Redis активно
+2025-12-07 19:08:11.246 | INFO     | src.app.database.sqlite_db:check_connection:238 - Соединение с SQLite активно
+2025-12-07 19:08:11.247 | INFO     | __main__:main:46 - Все сервисы запущены
+2025-12-07 19:08:11.247 | DEBUG    | __main__:main:47 - Debug
+2025-12-07 19:08:11.247 | INFO     | __main__:main:48 - Info
+2025-12-07 19:08:11.248 | WARNING  | __main__:main:49 - Warning
+2025-12-07 19:08:11.248 | ERROR    | __main__:main:50 - Error
+2025-12-07 19:08:11.248 | CRITICAL | __main__:main:51 - Critical

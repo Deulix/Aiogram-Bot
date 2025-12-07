@@ -15,7 +15,7 @@ git clone https://github.com/Deulix/Aiogram-Bot.git
 cd '.\Aiogram Bot\'
 ```
 
-3. **Настройте переменные окружения:**
+3. **Переименуйте env файл и настройте его (смотрите ниже):**
 ```bash
 cp .env.example .env
 ```
@@ -29,51 +29,53 @@ docker-compose up -d
 ## ⚙️ Конфигурация
 Перед запуском заполните .env файл:
 ```python
-BOT_TOKEN=your_bot_token # Токен бота, полученный у BotFather
-ADMIN_ID=your_id # Ваш Telegram ID (нельзя лишить администрирования)
-REDIS_PORT=6379 # Стандартный порт redis
-REDIS_HOST="redis" # Стандартный хост redis
-DATABASE_URL="sqlite+aiosqlite:///your_db_path/your_db_name.db" # Путь к вашей async sqlite БД
-TEST_PAYMENT_KEY=your_test_payment_key # Тестовый ключ оплаты, полученный у BotFather
-MAPS_API_KEY=your_yandex_geocoder_api_key # API ключ для поиска улиц, полученный у Yandex
+BOT_TOKEN=your_bot_token # ваш токен от @botfather в telegram
+ADMIN_ID=your_telegram_id # ваш id в telegram
+REDIS_PORT=your_redis_port # стандартный порт redis (по умолчанию 6379)
+REDIS_HOST=your_redis_host # стандартный хост redis (по умолчанию "redis")
+DATABASE_URL="sqlite+aiosqlite:///src/app/database/shop.db" # ваш путь к базе данных, указан по умолчанию
+TEST_PAYMENT_KEY=your_redis_port # ваш токен (ключ) для оплаты 
+MAPS_API_KEY=your_redis_port # ваш токен (ключ) от Yandex JavaScript API и HTTP Геокодер
 ```
 ## 📁 Структура проекта
 ```bash
 Aiogram-Bot/
-├── alembic/
-│   ├── versions/
+
+├── alembic
+│   ├── versions
 │   │   └── ...
 │   ├── env.py
 │   ├── README
 │   └── script.py.mako
-├── src/
-│   ├── app/
-│   │   ├── bot/
+├── src
+│   ├── app
+│   │   ├── bot
 │   │   │   ├── handlers.py
 │   │   │   ├── keyboards.py
 │   │   │   └── payments.py
-│   │   ├── config/
+│   │   ├── config
 │   │   │   └── settings.py
-│   │   ├── database/
+│   │   ├── database
 │   │   │   ├── models.py
 │   │   │   ├── redis_db.py
 │   │   │   ├── shop.db
 │   │   │   ├── sqlite_db_dump.sql
 │   │   │   └── sqlite_db.py
 │   │   └── main.py
-│   └── tests/
+│   └── tests
 │       └── ...
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
+├── .python-version
 ├── alembic.ini
-├── dev-requirements.txt
 ├── docker-compose.yml
 ├── Dockerfile.dev
 ├── Dockerfile.prod
-├── prod-requirements.txt
+├── pyproject.toml
 ├── pytest.ini
-└── README.md
+├── README.md
+└── uv.lock
 ```
 
 ## 🛠️ Технологии
@@ -106,8 +108,8 @@ Aiogram-Bot/
 - [x] CRUD для заказов, продуктов
 - [x] Корзина Redis
 - [x] Админка через Telegram
+- [x] Оплата (тестовая)
 - [ ] Тесты
-- [ ] Оплата (тестовая)
 - [ ] Админка через FastAPI
 - [ ] PostgreSQL
 
