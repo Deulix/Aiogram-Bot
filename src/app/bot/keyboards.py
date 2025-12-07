@@ -44,7 +44,7 @@ async def init_category_menu(products: list[Product]):
             callback_data=f"add_{product.id}_large",
         )
 
-        if not product.has_only_one_size:
+        if not product.has_only_small_size:
             keyboard.row(name_btn, small_size_btn, large_size_btn)
         else:
             keyboard.row(name_btn, small_size_btn)

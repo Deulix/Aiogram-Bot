@@ -6,6 +6,7 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
+from loguru import logger
 
 # from pydantic import BaseModel
 from redis.asyncio import Redis
@@ -288,23 +289,15 @@ async def cmd_handle_admin(
 async def cmd_handle_redis(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
-    user_id = callback.from_user.id
-    user = await db.get_user_by_id(user_id)
-    if user.is_admin:
-        await redis.set("REDIS_STATUS", "OK")
-        redis_result = await redis.get("REDIS_STATUS")
-        sqlite_result = await db.check_connection()
-        await callback.message.edit_text(
-            f"REDIS_STATUS: {redis_result or 'FAIL'}\nSQLITE_STATUS: {'OK' if sqlite_result else 'FAIL'}",
-            reply_markup=await kb.admin(),
-        )
-        await redis.delete("REDIS_STATUS")
+    redis_result = await redis.ping()
+    logger.info("Соединение с Redis активно")
 
-    else:
-        await callback.message.edit_text(
-            "Я умею отвечать только на меню. Выбери пункт ниже:",
-            reply_markup=await kb.main_menu(user),
-        )
+    sqlite_result = await db.check_connection()
+    await callback.message.edit_text(
+        f"REDIS_STATUS: {'OK' if redis_result else 'FAIL'}\nSQLITE_STATUS: {'OK' if sqlite_result else 'FAIL'}",
+        reply_markup=await kb.admin(),
+    )
+    await redis.delete("REDIS_STATUS")
 
 
 class AddProduct(StatesGroup):
@@ -916,7 +909,7 @@ async def entrance(message: Message, state: FSMContext):
         await state.update_data(entrance=entrance)
 
     await message.answer(
-        "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите дополнительную информацию\n/skip для пропуска",
+        "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите дополнительную информацию или /skip для пропуска",
         reply_markup=await kb.cancel_order(),
     )
     await state.set_state(OrderStates.additional_info)

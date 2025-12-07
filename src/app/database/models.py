@@ -52,28 +52,27 @@ class Product(Base):
     # а в OrderItem строчка product = relationship("Product", back_popultates="order_items")
     # тогда будет коннект, backref экономит несколько строк
 
-    @staticmethod
-    def get_size_text(category: str, size: str) -> str | None:
+    def get_size_text(self, size) -> str | None:
         sizes = {
             "pizza": {"small": "cтандарт", "large": "большая"},
             "snack": {"small": "cтандарт", "large": "большая"},
             "drink": {"small": "0.5 литра", "large": "1 литр"},
             "cake": {"small": "cтандарт", "large": "большой"},
         }
-        return sizes[category][size]
+        return sizes[self.category][size]
 
     @property
     def small_size_text(self) -> str:
         if (
-            self.price_large
+            not self.has_only_small_size
         ):  # чтобы не показывало надпись "стандарт" у продуктов с одним размером
-            return self.get_size_text(self.category, "small")
+            return self.get_size_text("small")
         else:
             return ""
 
     @property
     def large_size_text(self) -> str | None:
-        return self.get_size_text(self.category, "large")
+        return self.get_size_text("large")
 
     def get_size_price(self, size) -> float | None:
         if size == "large":
@@ -84,7 +83,7 @@ class Product(Base):
             return None
 
     @property
-    def has_only_one_size(self):
+    def has_only_small_size(self):
         return self.price_large is None
 
 
