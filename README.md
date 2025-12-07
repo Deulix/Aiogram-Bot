@@ -1,5 +1,5 @@
 # 🤖 Aiogram Bot
-Проект Telegram бота на Aiogram 3.21.0 клиентов и администраторов пиццерий
+Проект Telegram бота на Aiogram 3.21+ клиентов и администраторов пиццерий
 
 ## 🚀 Быстрый старт
 
@@ -70,8 +70,7 @@ Aiogram-Bot/
 ├── .python-version
 ├── alembic.ini
 ├── docker-compose.yml
-├── Dockerfile.dev
-├── Dockerfile.prod
+├── Dockerfile
 ├── pyproject.toml
 ├── pytest.ini
 ├── README.md
