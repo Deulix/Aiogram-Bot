@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from src.app.database.sqlite_db import Product, Order, User
+from src.app.database.sqlite_db import Order, Product, User
 
 
 async def main_menu(user: User):
@@ -73,11 +73,11 @@ async def init_cart(cart_items: tuple, cart_amount: float):
             )
             keyboard.row(
                 InlineKeyboardButton(
-                    text=f"+1",
+                    text="+1",
                     callback_data=f"plus_{product.id}_{size}",
                 ),
                 InlineKeyboardButton(
-                    text=f"-1",
+                    text="-1",
                     callback_data=(
                         f"minus_{product.id}_{size}"
                         if int(quantity) > 1 or len(cart_items) > 1
@@ -85,7 +85,7 @@ async def init_cart(cart_items: tuple, cart_amount: float):
                     ),
                 ),
                 InlineKeyboardButton(
-                    text=f"❌",
+                    text="❌",
                     callback_data=(
                         f"del_{product.id}_{size}"
                         if len(cart_items) > 1
@@ -174,7 +174,7 @@ async def cancel_admin_action(action=""):
 async def admin_list(admins: list[User], callback_user: User):
     keyboard = InlineKeyboardBuilder()
     for admin in admins:
-        text = f'{admin.id} - {admin.username} - {admin.first_name}{" (Вы)" if admin.id == callback_user.id else ""}'
+        text = f"{admin.id} - {admin.username} - {admin.first_name}{' (Вы)' if admin.id == callback_user.id else ''}"
         keyboard.add(
             InlineKeyboardButton(text=text, callback_data=f"admin_id_{admin.id}")
         )
@@ -240,7 +240,7 @@ async def product_edit_choose(product: Product):
             callback_data=f"product_parameter_edit_price-small_{product.id}",
         ),
         InlineKeyboardButton(
-            text=f"ЦЕНА ЗА БОЛЬШОЙ(УЮ) ({f'{product.price_large} BYN' if product.price_large else "---"})",
+            text=f"ЦЕНА ЗА БОЛЬШОЙ(УЮ) ({f'{product.price_large} BYN' if product.price_large else '---'})",
             callback_data=f"product_parameter_edit_price-large_{product.id}",
         ),
         InlineKeyboardButton(
@@ -248,15 +248,15 @@ async def product_edit_choose(product: Product):
             callback_data=f"product_parameter_edit_category_{product.id}",
         ),
         InlineKeyboardButton(
-            text=f"ОПИСАНИЕ ({product.description or "---"})",
+            text=f"ОПИСАНИЕ ({product.description or '---'})",
             callback_data=f"product_parameter_edit_description_{product.id}",
         ),
         InlineKeyboardButton(
-            text=f"ИНГРЕДИЕНТЫ ({product.ingredients or "---"})",
+            text=f"ИНГРЕДИЕНТЫ ({product.ingredients or '---'})",
             callback_data=f"product_parameter_edit_ingredients_{product.id}",
         ),
         InlineKeyboardButton(
-            text=f"КБЖУ ({product.nutrition or "---"})",
+            text=f"КБЖУ ({product.nutrition or '---'})",
             callback_data=f"product_parameter_edit_nutrition_{product.id}",
         ),
     )
@@ -367,11 +367,9 @@ async def tests():
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text="Проверить соединение с БД", callback_data=f"db_check"
+            text="Проверить соединение с БД", callback_data="db_check"
         ),
-        InlineKeyboardButton(
-            text="Тестовый платёж", callback_data=f"test_payment_link"
-        ),
+        InlineKeyboardButton(text="Тестовый платёж", callback_data="test_payment_link"),
     )
     keyboard.row(
         InlineKeyboardButton(text="⬅️ Назад", callback_data="admin"),

@@ -3,7 +3,7 @@ import re
 
 import aiohttp
 from aiogram import F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
@@ -15,7 +15,6 @@ from src.app.config.settings import settings
 from src.app.database.models import Product
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
 
-# from transliterate import translit
 from . import keyboards as kb
 
 handlers_router = Router()
@@ -66,11 +65,11 @@ async def cmd_category_menu(
     cart = Cart(user_id=callback.from_user.id, redis=redis)
     try:
         cart_amount = await cart.get_current_amount()
-    except:
+    except:  # noqa: E722
         cart_amount = None
     await callback.message.edit_text(
         (
-            f"{"Стандарт: ~ 650 грамм, 29 см\nБольшая: ~ 850 грамм, 36 см\n\n" if category == "pizza" else ""}{f"Общая стоимость корзины: {cart_amount:.2f} BYN\n\n" if cart_amount else ""}Для продолжения заказа выбери пункт меню:"
+            f"{'Стандарт: ~ 650 грамм, 29 см\nБольшая: ~ 850 грамм, 36 см\n\n' if category == 'pizza' else ''}{f'Общая стоимость корзины: {cart_amount:.2f} BYN\n\n' if cart_amount else ''}Для продолжения заказа выбери пункт меню:"
         ),
         reply_markup=(
             await kb.catalog()
@@ -146,7 +145,7 @@ async def cmd_add_to_cart(
     await cart.increase_prod_count(full_callback)
     quantity += 1
     products: list[Product] = await db.get_products_by_category(product.category)
-    text = f"{product.category_rus.capitalize()} {product.name} {product.large_size_text if size == "large" else product.small_size_text} ({quantity} шт) добавлен(а) в корзину"
+    text = f"{product.category_rus.capitalize()} {product.name} {product.large_size_text if size == 'large' else product.small_size_text} ({quantity} шт) добавлен(а) в корзину"
 
     # logger.info(
     #     f"***User {user_id} added {product.name} to cart with size {size} and quantity {quantity}***"
@@ -154,7 +153,7 @@ async def cmd_add_to_cart(
     await cart.add_amount(product.get_size_price(size))
     cart_amount = await cart.get_current_amount()
     await callback.message.edit_text(
-        f"{"Стандарт: ~ 650 грамм, 29 см\nБольшая: ~ 850 грамм, 36 см" if product.category == "pizza"else ""}\n\n{text}\n\nОбщая стоимость корзины: {cart_amount:.2f} BYN\n\nДля продолжения заказа выбери пункт меню:",
+        f"{'Стандарт: ~ 650 грамм, 29 см\nБольшая: ~ 850 грамм, 36 см' if product.category == 'pizza' else ''}\n\n{text}\n\nОбщая стоимость корзины: {cart_amount:.2f} BYN\n\nДля продолжения заказа выбери пункт меню:",
         reply_markup=await kb.init_category_menu(products),
     )
 
@@ -192,7 +191,7 @@ async def cmd_cart_menu(
     except TypeError:
         cart_amount = None
     await callback.message.edit_text(
-        (f"КОРЗИНА:" if cart_items else "В корзине нет товаров."),
+        ("КОРЗИНА:" if cart_items else "В корзине нет товаров."),
         reply_markup=await kb.init_cart(cart_items, cart_amount),
     )
 
@@ -209,7 +208,7 @@ async def cmd_plus_quantity(
     cart_amount = await cart.get_current_amount()
     cart_items = await get_cart_items(callback.from_user.id, redis, db)
     await callback.message.edit_text(
-        f"КОРЗИНА:",
+        "КОРЗИНА:",
         reply_markup=await kb.init_cart(cart_items, cart_amount),
     )
 
@@ -229,7 +228,7 @@ async def cmd_minus_quantity(
     cart_amount = await cart.get_current_amount()
     cart_items = await get_cart_items(callback.from_user.id, redis, db)
     await callback.message.edit_text(
-        f"КОРЗИНА:",
+        "КОРЗИНА:",
         reply_markup=await kb.init_cart(cart_items, cart_amount),
     )
 
@@ -259,7 +258,7 @@ async def cmd_erase_cart(
     user = await db.get_user_by_id(user_id)
     cart = Cart(user_id=callback.from_user.id, redis=redis)
     await callback.message.edit_text(
-        f"Корзина была очищена.",
+        "Корзина была очищена.",
         reply_markup=await kb.main_menu(user),
     )
     await cart.clear()
@@ -282,13 +281,13 @@ async def cmd_handle_admin(
     if user.is_admin:
         await state.clear()
         await callback.message.edit_text(
-            f"АДМИНПАНЕЛЬ:\n",
+            "АДМИНПАНЕЛЬ:\n",
             reply_markup=await kb.admin(),
         )
 
     else:
         await callback.message.edit_text(
-            f"Я умею отвечать только на меню. Выбери пункт ниже:",
+            "Я умею отвечать только на меню. Выбери пункт ниже:",
             reply_markup=await kb.main_menu(user),
         )
 
@@ -304,14 +303,14 @@ async def cmd_handle_redis(
         redis_result = await redis.get("REDIS_STATUS")
         sqlite_result = await db.check_connection()
         await callback.message.edit_text(
-            f"REDIS_STATUS: {redis_result or "FAIL"}\nSQLITE_STATUS: {"OK" if sqlite_result else "FAIL"}",
+            f"REDIS_STATUS: {redis_result or 'FAIL'}\nSQLITE_STATUS: {'OK' if sqlite_result else 'FAIL'}",
             reply_markup=await kb.admin(),
         )
         await redis.delete("REDIS_STATUS")
 
     else:
         await callback.message.edit_text(
-            f"Я умею отвечать только на меню. Выбери пункт ниже:",
+            "Я умею отвечать только на меню. Выбери пункт ниже:",
             reply_markup=await kb.main_menu(user),
         )
 
@@ -341,7 +340,7 @@ class AddProduct(StatesGroup):
 @handlers_router.callback_query(F.data == "product_create")
 async def cmd_product_create(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
-        f"ДОБАВЛЕНИЕ ТОВАРА \nВыберите тип товара:",
+        "ДОБАВЛЕНИЕ ТОВАРА \nВыберите тип товара:",
         reply_markup=await kb.create_product(),
     )
     await state.set_state(AddProduct.choose_type)
@@ -363,7 +362,7 @@ async def state_product_create_choose_type(callback: CallbackQuery, state: FSMCo
     await state.update_data(emoji=categories[category][1])
     await state.set_state(AddProduct.add_name)
     await callback.message.edit_text(
-        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}) \nДобавьте название (обязательно):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value('category_rus')}) \nДобавьте название (обязательно):",
         reply_markup=await kb.cancel_admin_action(),
     )
 
@@ -371,14 +370,9 @@ async def state_product_create_choose_type(callback: CallbackQuery, state: FSMCo
 @handlers_router.message(AddProduct.add_name)
 async def state_product_create_add_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text.capitalize())
-    # await state.update_data(
-    #     callback_name=translit(
-    #         message.text.replace(" ", ".").lower(), "ru", reversed=True
-    #     )
-    # )
     await state.set_state(AddProduct.add_price_small_size)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}) \nДобавьте цену для стандартного размера (обязательно):",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value('category_rus')}, {await state.get_value('name')}) \nДобавьте цену для стандартного размера (обязательно):",
         reply_markup=await kb.cancel_admin_action(),
     )
 
@@ -388,8 +382,8 @@ async def state_product_create_add_price_small(message: Message, state: FSMConte
     await state.update_data(price_small=message.text.replace(",", "."))
     await state.set_state(AddProduct.add_price_large_size)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}, "
-        f"{await state.get_value("price_small")} BYN) \nДобавьте цену для большого размера\n\n/skip для пропуска",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value('category_rus')}, {await state.get_value('name')}, "
+        f"{await state.get_value('price_small')} BYN) \nДобавьте цену для большого размера\n\n/skip для пропуска",
         reply_markup=await kb.cancel_admin_action(),
     )
 
@@ -401,8 +395,8 @@ async def state_product_create_add_price_large(message: Message, state: FSMConte
     )
     await state.set_state(AddProduct.add_description)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}, "
-        f"{await state.get_value("price_small")}/{await state.get_value("price_large")} BYN) \nДобавьте описание\n\n/skip для пропуска",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value('category_rus')}, {await state.get_value('name')}, "
+        f"{await state.get_value('price_small')}/{await state.get_value('price_large')} BYN) \nДобавьте описание\n\n/skip для пропуска",
         reply_markup=await kb.cancel_admin_action(),
     )
 
@@ -414,8 +408,8 @@ async def state_product_create_add_description(message: Message, state: FSMConte
     )
     await state.set_state(AddProduct.add_ingredients)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")},"
-        f"{await state.get_value("price_small")}/{await state.get_value("price_large")} BYN) \nДобавьте состав\n\n/skip для пропуска",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value('category_rus')}, {await state.get_value('name')},"
+        f"{await state.get_value('price_small')}/{await state.get_value('price_large')} BYN) \nДобавьте состав\n\n/skip для пропуска",
         reply_markup=await kb.cancel_admin_action(),
     )
 
@@ -427,8 +421,8 @@ async def state_product_create_add_ingredients(message: Message, state: FSMConte
     )
     await state.set_state(AddProduct.add_nutrition)
     await message.answer(
-        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value("category_rus")}, {await state.get_value("name")}, "
-        f"{await state.get_value("price_small")}/{await state.get_value("price_large")} BYN) \nДобавьте КБЖУ\n\n/skip для пропуска",
+        f"ДОБАВЛЕНИЕ ТОВАРА \n({await state.get_value('category_rus')}, {await state.get_value('name')}, "
+        f"{await state.get_value('price_small')}/{await state.get_value('price_large')} BYN) \nДобавьте КБЖУ\n\n/skip для пропуска",
         reply_markup=await kb.cancel_admin_action(),
     )
 
@@ -449,7 +443,7 @@ async def state_product_create_add_nutrition(
     nutrition = data["nutrition"]
     emoji = data["emoji"]
     await state.clear()
-    await db.add_product(
+    product = await db.add_product(
         name=name,
         price_small=price_small,
         price_large=price_large,
@@ -462,13 +456,13 @@ async def state_product_create_add_nutrition(
     )
 
     await message.answer(
-        f"СОЗДАН ТОВАР\nКатегория: {category_rus}\nEmoji: {emoji}"
-        f"\nНазвание: {name}\n"
-        f"Категория в DB: {category}\n"
-        f"Цена: {price_small}{f" / {price_large} BYN" if price_large else " BYN (один размер)"}\n"
-        f"Описание: {f"\n{description}"  if description else "---"}\n"
-        f"Состав:{f"\n{ingredients}"  if ingredients else "---"}\n"
-        f"КБЖУ: {f"\n{nutrition}" if nutrition else "---"}",
+        f"СОЗДАН ТОВАР\nКатегория: {product.category_rus}\nEmoji: {product.emoji}"
+        f"\nНазвание: {product.name}\n"
+        f"Категория в DB: {product.category}\n"
+        f"Цена: {product.price_small}{f' / {product.price_large} BYN' if product.price_large else ' BYN (один размер)'}\n"
+        f"Описание: {f'\n{product.description}' if product.description else '---'}\n"
+        f"Состав:{f'\n{product.ingredients}' if product.ingredients else '---'}\n"
+        f"КБЖУ: {f'\n{product.nutrition}' if product.nutrition else '---'}",
         reply_markup=await kb.admin(),
     )
 
@@ -477,7 +471,7 @@ async def state_product_create_add_nutrition(
 async def cmd_product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
     await callback.message.edit_text(
-        f"УДАЛЕНИЕ ТОВАРА \nВыберите товар из списка для удаления:",
+        "УДАЛЕНИЕ ТОВАРА \nВыберите товар из списка для удаления:",
         reply_markup=await kb.product_delete(products),
     )
 
@@ -513,7 +507,7 @@ class EditProduct(StatesGroup):
 async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
     await callback.message.edit_text(
-        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите товар из списка для изменения:",
+        "РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите товар из списка для изменения:",
         reply_markup=await kb.product_edit(products),
     )
 
@@ -525,7 +519,7 @@ async def cmd_product_edit_choose(
     product_id = callback.data.split("_")[-1]
     product = await db.get_product_by_id(product_id)
     await callback.message.edit_text(
-        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите значение из списка для изменения",
+        "РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите значение из списка для изменения",
         reply_markup=await kb.product_edit_choose(product),
     )
 
@@ -537,7 +531,7 @@ async def cmd_product_edit_choose(callback: CallbackQuery, state: FSMContext):
     product_parameter = parts[-2].replace("-", "_")
     await state.update_data(product_id=product_id, product_parameter=product_parameter)
     await callback.message.edit_text(
-        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВведите новое значение:",
+        "РЕДАКТИРОВАНИЕ ТОВАРА \nВведите новое значение:",
         reply_markup=await kb.cancel_admin_action("edit"),
     )
     await state.set_state(EditProduct.edit)
@@ -575,13 +569,16 @@ async def get_admin_info(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     can_dismiss = False
     admin_id = callback.data.split("_")[-1]
     admin = await db.get_user_by_id(admin_id)
-    if callback.from_user.id in [
-        settings.ADMIN_ID,
-        admin.id,
-    ]:  # Даём право снимать админку, если метод вызывает суперадминистратор или админ снимает себя
+    if (
+        callback.from_user.id
+        in [
+            settings.ADMIN_ID,
+            admin.id,
+        ]
+    ):  # Даём право снимать админку, если метод вызывает суперадминистратор или админ снимает себя
         can_dismiss = True
     await callback.message.edit_text(
-        f"ИНФОРМАЦИЯ ОБ АДМИНИСТРАТОРЕ\n\nID: {admin.id}\nUsername: @{admin.username}\nИмя: {admin.first_name}\n{f"Фамилия: {admin.last_name}\n" if admin.last_name else ""}",
+        f"ИНФОРМАЦИЯ ОБ АДМИНИСТРАТОРЕ\n\nID: {admin.id}\nUsername: @{admin.username}\nИмя: {admin.first_name}\n{f'Фамилия: {admin.last_name}\n' if admin.last_name else ''}",
         reply_markup=await kb.back_to_admin_list(can_dismiss, admin_id),
     )
 
@@ -639,7 +636,7 @@ async def dismiss_admin(
     admin_id = callback.data.split("_")[-1]
     if int(admin_id) == settings.ADMIN_ID:
         await callback.message.edit_text(
-            f"УДАЛЕНИЕ АДМИНИСТРАТОРА\n\n❌ ОШИБКА! Суперадминистратор не может быть снят.",
+            "УДАЛЕНИЕ АДМИНИСТРАТОРА\n\n❌ ОШИБКА! Суперадминистратор не может быть снят.",
             reply_markup=await kb.admin(),
         )
         return
@@ -719,13 +716,13 @@ async def phone(event: Message | CallbackQuery, state: FSMContext):
         operator_code_verified = client_phone.startswith(operators_codes)
         if len(client_phone) != 9 or not client_phone.isdecimal():
             await event.answer(
-                f"ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер телефона должен быть в формате XX1234567, где XX ваш код оператора (для Беларуси {", ".join(operators_codes)}).\n✅ Пример: 291234567\n\nВведите ваш номер телефона:",
+                f"ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Номер телефона должен быть в формате XX1234567, где XX ваш код оператора (для Беларуси {', '.join(operators_codes)}).\n✅ Пример: 291234567\n\nВведите ваш номер телефона:",
                 reply_markup=await kb.cancel_order(),
             )
             return
         elif not operator_code_verified:
             await event.answer(
-                f"ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Неверный код оператора.\nАктуальные коды: {", ".join(operators_codes)}\n✅ Пример: 291234567\n\nВведите ваш номер телефона:",
+                f"ОФОРМЛЕНИЕ ЗАКАЗА\n\n❌ ОШИБКА! Неверный код оператора.\nАктуальные коды: {', '.join(operators_codes)}\n✅ Пример: 291234567\n\nВведите ваш номер телефона:",
                 reply_markup=await kb.cancel_order(),
             )
             return
@@ -1025,7 +1022,7 @@ async def order_by_id(callback: CallbackQuery, db: AsyncSQLiteDatabase):
         quantity = order_item.quantity
         price = order_item.price
         order_items_text.append(
-            f"{emoji[0]} {name} {size_text} - {quantity} шт. -- {(price*quantity):.2f} BYN\n"
+            f"{emoji[0]} {name} {size_text} - {quantity} шт. -- {(price * quantity):.2f} BYN\n"
         )
     order_items_normalized = "".join(order_items_text)
     mark = {
@@ -1055,8 +1052,8 @@ async def product_info(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     product_id = callback.data.split("_")[-1]
     product = await db.get_product_by_id(product_id)
     await callback.answer(
-        f"{product.category_rus.capitalize()} {product.name}\n{f"\n{product.description}\n" if product.description else ""}\
-        {f"\nСостав: \n{product.ingredients}\n" if product.ingredients else ""}{f"\n{product.nutrition}" if product.nutrition else ""}",
+        f"{product.category_rus.capitalize()} {product.name}\n{f'\n{product.description}\n' if product.description else ''}\
+        {f'\nСостав: \n{product.ingredients}\n' if product.ingredients else ''}{f'\n{product.nutrition}' if product.nutrition else ''}",
         show_alert=True,
     )
 

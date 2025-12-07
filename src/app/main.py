@@ -1,11 +1,12 @@
 import asyncio
 import logging
-from src.app.config.settings import settings
 
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
+
 from src.app.bot.handlers import handlers_router
 from src.app.bot.payments import payments_router
+from src.app.config.settings import settings
 from src.app.database.redis_db import init_redis
 from src.app.database.sqlite_db import init_async_sqlite
 
