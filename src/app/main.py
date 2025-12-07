@@ -44,11 +44,6 @@ async def main():
     dp.include_router(handlers_router)
     dp.include_router(payments_router)
     logger.info("Все сервисы запущены")
-    logger.debug("Debug")
-    logger.info("Info")
-    logger.warning("Warning")
-    logger.error("Error")
-    logger.critical("Critical")
     await dp.start_polling(bot)
 
 
