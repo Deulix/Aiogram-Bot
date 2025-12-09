@@ -3,8 +3,11 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 
-from src.app.bot.handlers.handlers import handlers_router
-from src.app.bot.payments.payments import payments_router
+from app.bot.handlers.admin_handlers import admin_router
+from app.bot.handlers.cart_handlers import cart_router
+from app.bot.handlers.navigation_handlers import navigation_router
+from app.bot.handlers.order_handlers import order_router
+from app.bot.handlers.payment_handlers import payment_router
 from src.app.config.logger import logger, setup_logging
 from src.app.config.settings import settings
 from src.app.database.redis_db import init_redis
@@ -21,8 +24,11 @@ async def main():
     sqlite_db = await init_async_sqlite()
     dp["redis"] = redis
     dp["db"] = sqlite_db
-    dp.include_router(handlers_router)
-    dp.include_router(payments_router)
+    dp.include_router(navigation_router)
+    dp.include_router(payment_router)
+    dp.include_router(admin_router)
+    dp.include_router(cart_router)
+    dp.include_router(order_router)
     logger.info("Все сервисы запущены")
     logger.info("FastAPI доступен по адресу http://localhost:8000/")
     await dp.start_polling(bot)

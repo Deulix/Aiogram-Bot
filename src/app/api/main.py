@@ -3,6 +3,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from src.app.api.services import user_service as us
+from src.app.database.sqlite_db import AsyncSQLiteDatabase
 
 app = FastAPI(title="Админпанель пиццерии")
 
@@ -27,13 +28,13 @@ class UserResponse(BaseModel):
 
 @app.get("/user", response_model=list[UserResponse])
 async def api_get_users():
-    users = await us.get_users()
+    users = await us.get_users(AsyncSQLiteDatabase)
     return users
 
 
 @app.get("/user/{user_id}", response_model=UserResponse)
 async def api_get_user_by_id(user_id: int):
-    user = await us.get_user_by_id(user_id)
+    user = await us.get_user_by_id(AsyncSQLiteDatabase, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
