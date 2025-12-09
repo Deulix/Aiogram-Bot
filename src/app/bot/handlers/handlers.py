@@ -6,16 +6,16 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
-from loguru import logger
 
 # from pydantic import BaseModel
 from redis.asyncio import Redis
 
+from src.app.config.logger import logger
 from src.app.config.settings import settings
 from src.app.database.models import Product
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
 
-from . import keyboards as kb
+from ..keyboards import keyboards as kb
 
 handlers_router = Router()
 

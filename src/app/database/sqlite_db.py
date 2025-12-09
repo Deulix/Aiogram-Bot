@@ -1,9 +1,9 @@
 from typing import Self
 
-from loguru import logger
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from src.app.config.logger import logger
 from src.app.config.settings import settings
 
 from .models import Order, OrderItem, Product, User
@@ -159,6 +159,12 @@ class AsyncSQLiteDatabase:
                 return None
             user.is_admin = False
             await session.commit()
+
+    async def get_users(self) -> list[User]:
+        async with self.AsyncSession() as session:
+            stmt = select(User)
+            result = await session.execute(stmt)
+            return result.scalars().all()
 
     async def get_admins(self) -> list[User]:
         async with self.AsyncSession() as session:

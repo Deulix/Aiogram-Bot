@@ -19,8 +19,25 @@ services:
             - .env
         restart: unless-stopped
         volumes:
-            - ./src/app/database:/bot_app/src/app/database
-            - ./logs:/bot_app/logs/
+            - ./src/app/database:/pzz_app/src/app/database
+            - ./logs:/pzz_app/logs/
+        command: python -m src.app.bot.main
 
+    fastapi_admin:
+        build: 
+            context: .
+        container_name: fastapi_admin
+        depends_on:
+            - redis
+        ports:
+            - "8000:8000"
+        env_file:
+            - .env
+        restart: unless-stopped
+        volumes:
+            - ./src/app/database:/pzz_app/src/app/database
+            - ./logs:/pzz_app/logs/
+        command: uvicorn src.app.api.main:app --host 0.0.0.0 --port 8000 --log-level warning
 volumes:
     redis_data:
+
