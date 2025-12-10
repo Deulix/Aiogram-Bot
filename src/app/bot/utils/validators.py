@@ -1,6 +1,7 @@
 import aiohttp
 
-from src.app.config import settings
+from src.app.config.logger import logger
+from src.app.config.settings import settings
 
 
 async def validate_street_api(street: str) -> tuple[str, bool]:
@@ -34,5 +35,5 @@ async def validate_street_api(street: str) -> tuple[str, bool]:
                             return yandex_street_name, True
                     return street_noralized, False
     except Exception as e:
-        print(e)
+        logger.error(e)
         return street_noralized, False

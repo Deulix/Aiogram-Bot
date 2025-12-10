@@ -1,9 +1,10 @@
 import asyncio
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 
 from src.app.bot.keyboards import navigation_keyboards as nav_kb
+from src.app.config.logger import logger
 from src.app.config.settings import settings
 from src.app.database.models import OrderItem
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
@@ -82,29 +83,14 @@ async def payment(callback: CallbackQuery, db: AsyncSQLiteDatabase):
         )
 
 
-async def delete_invoice_with_delay(bot, chat_id: int, message_id: int, delay: int):
+async def delete_invoice_with_delay(
+    bot: Bot, chat_id: int, message_id: int, delay: int
+):
     await asyncio.sleep(delay)
     try:
         await bot.delete_message(chat_id=chat_id, message_id=message_id)
     except Exception as e:
-        print(e)
-
-
-# # TEST
-# @payment_router.pre_checkout_query()
-# async def TEST_pre_checkout(pre_checkout_query: PreCheckoutQuery):
-#     await pre_checkout_query.bot.answer_pre_checkout_query(
-#         pre_checkout_query.id, ok=True
-#     )
-
-
-# # TEST
-# @payment_router.message(F.successful_payment)
-# async def TEST_successful_payment(message: Message):
-#     await message.answer(
-#         '(TEST) ✅ Оплата прошла успешно! Ваш заказ готовится.\nПосмотреть статус заказа можно в меню "Мои заказы"',
-#         reply_markup=await nav_kb.main_menu(),
-#     )
+        logger.error(e)
 
 
 @payment_router.pre_checkout_query()

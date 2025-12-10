@@ -1,14 +1,13 @@
 from aiogram.types import CallbackQuery
 from redis.asyncio import Redis
 
-from src.app.bot.services.cart_service import Cart
 from src.app.database.models import Product
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
 
 
 async def getall(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
-) -> tuple[Product, str, Cart, str, int, list]:
+) -> tuple[Product, str, "Cart", str, int, list]:
     id = callback.data.split("_")[-2]
     product = await db.get_product_by_id(id)
     size = callback.data.split("_")[-1]
