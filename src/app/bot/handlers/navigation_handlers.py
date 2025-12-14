@@ -53,10 +53,10 @@ async def category_menu(
     db: AsyncSQLiteDatabase,
     redis: Redis,
 ):
-    category = callback_data.category
+    category = callback_data.action
     products: list[Product] = await db.get_products_by_category(category)
     cart = Cart(user_id=callback.from_user.id, redis=redis)
-    cart_amount = await cart.get_current_amount()
+    cart_amount = await cart.get_current_price_amount()
     await callback.message.edit_text(
         (
             f"{'Стандарт: ~ 650 грамм, 29 см\nБольшая: ~ 850 грамм, 36 см\n\n' if category == 'pizza' else ''}{f'Общая стоимость корзины: {cart_amount:.2f} BYN\n\n' if cart_amount else ''}Для продолжения заказа выбери пункт меню:"

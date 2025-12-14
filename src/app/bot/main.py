@@ -3,17 +3,11 @@ import asyncio
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 
-from src.app.bot.handlers.admin_handlers import admin_router
-from src.app.bot.handlers.cart_handlers import cart_router
-from src.app.bot.handlers.navigation_handlers import navigation_router
-from src.app.bot.handlers.order_handlers import order_router
-from src.app.bot.handlers.payment_handlers import payment_router
+from src.app.bot.handlers.handlers_routers import routers
 from src.app.config.logger import logger, setup_logging
 from src.app.config.settings import settings
 from src.app.database.redis_db import init_redis
 from src.app.database.sqlite_db import init_async_sqlite
-
-routers = [navigation_router, payment_router, admin_router, cart_router, order_router]
 
 
 async def main():

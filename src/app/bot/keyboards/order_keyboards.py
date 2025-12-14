@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from src.app.bot.core.callbacks import MenuNavigationCallback, OrderCallback
 from src.app.database.sqlite_db import Order
 
 
@@ -17,14 +18,20 @@ async def orders(orders: list[Order]):
     keyboard.adjust(1)
     if not orders:
         keyboard.row(
-            InlineKeyboardButton(text="📋 Каталог", callback_data="catalog"),
+            InlineKeyboardButton(
+                text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG
+            ),
         )
         keyboard.row(
-            InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
+            InlineKeyboardButton(
+                text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+            ),
         )
     else:
         keyboard.row(
-            InlineKeyboardButton(text="⬅️ Назад", callback_data="main menu"),
+            InlineKeyboardButton(
+                text="⬅️ Назад", callback_data=MenuNavigationCallback.MAIN_MENU
+            ),
         )
     return keyboard.as_markup()
 
@@ -34,14 +41,25 @@ async def order_info(order: Order):
     if order.status == "pending":
         keyboard.row(
             InlineKeyboardButton(
-                text="✅ Оплатить заказ", callback_data=f"payment_link_{order.id}"
+                text="✅ Оплатить заказ",
+                callback_data=OrderCallback.confirm_order(order.id),
+            ),
+        )
+        keyboard.row(
+            InlineKeyboardButton(
+                text="❌ Отменить заказ",
+                callback_data=OrderCallback.cancel_order(order.id),
             ),
         )
     keyboard.row(
-        InlineKeyboardButton(text="⬅️ Назад", callback_data="orders"),
+        InlineKeyboardButton(
+            text="⬅️ Назад", callback_data=MenuNavigationCallback.ORDERS
+        ),
     )
     keyboard.row(
-        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
+        InlineKeyboardButton(
+            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+        ),
     )
     return keyboard.adjust(1).as_markup()
 
@@ -56,11 +74,14 @@ async def cancel_order(value=""):
     if value == "change_street":
         keyboard.add(
             InlineKeyboardButton(
-                text="↩️ Повторно ввести улицу", callback_data="change_street"
+                text="↩️ Повторно ввести улицу",
+                callback_data=OrderCallback.edit_street(),
             ),
         )
     keyboard.add(
-        InlineKeyboardButton(text="🛑 Отмена", callback_data="cart"),
+        InlineKeyboardButton(
+            text="🛑 Отмена", callback_data=MenuNavigationCallback.CART
+        ),
     )
     return keyboard.adjust(1).as_markup()
 
@@ -69,10 +90,13 @@ async def order_confirm(order_id):
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text="✅ Оплатить заказ", callback_data=f"payment_link_{order_id}"
+            text="✅ Оплатить заказ",
+            callback_data=OrderCallback.confirm_order(order_id),
         ),
     )
     keyboard.row(
-        InlineKeyboardButton(text="⏪ Главное меню", callback_data="main menu"),
+        InlineKeyboardButton(
+            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+        ),
     )
     return keyboard.adjust(2).as_markup()

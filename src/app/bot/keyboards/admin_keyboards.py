@@ -203,5 +203,7 @@ async def back_to_admin_list(can_dismiss, admin_id):
                 callback_data=AdminCallback.dismiss_admin(admin_id),
             )
         )
-    keyboard.add(InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_list"))
+    keyboard.add(
+        InlineKeyboardButton(text="⬅️ Назад", callback_data=AdminCallback.ADMIN_LIST)
+    )
     return keyboard.adjust(1).as_markup()

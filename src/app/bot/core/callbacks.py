@@ -4,9 +4,29 @@ from aiogram.filters.callback_data import CallbackData
 
 from src.app.bot.core import CATEGORIES_AVAILABLE, SIZES_AVAILABLE
 
+MENU_COMMANDS = Literal["cart", "main_menu", "catalog", "contacts", "orders", "admin"]
+ORDER_COMMANDS = Literal["order_details", "cancel", "confirm", "edit_street"]
+CATEGORY_COMMANDS = Literal["pizza", "snack", "drink"]
+CART_COMMANDS = Literal["increase", "decrease", "erase_all", "delete", "make_order"]
+PRODUCT_COMMANDS = Literal["add_to_cart", "view_product_details"]
+ADMIN_COMMANDS = Literal[
+    "add_product",
+    "edit_product",
+    "delete_product",
+    "confirm_deleting_product",
+    "admin_list",
+    "test_functions",
+    "test_payment",
+    "check_db",
+    "get_admin_info",
+    "create_admin",
+    "dismiss_admin",
+]
+PAYMENT_COMMANDS = Literal["confirm_payment", "cancel_payment"]
+
 
 class MenuNavigationCallback(CallbackData, prefix="menu"):
-    action: Literal["cart", "main_menu", "catalog", "contacts", "orders", "admin"]
+    action: MENU_COMMANDS
 
     @property
     def CART(self):
@@ -34,43 +54,46 @@ class MenuNavigationCallback(CallbackData, prefix="menu"):
 
 
 class OrderCallback(CallbackData, prefix="order"):
-    action: Literal["order_details", "cancel", "confirm"]
-    order_id: int
+    action: ORDER_COMMANDS
+    order_id: int | None = None
 
-    @property
-    def ORDER_DETAILS(self):
-        return OrderCallback(action="order_details", order_id=self.order_id).pack()
+    @classmethod
+    def order_details(cls, order_id):
+        return cls(action="order_details", order_id=order_id).pack()
 
-    @property
-    def CANCEL(self):
-        return OrderCallback(action="cancel", order_id=self.order_id).pack()
+    @classmethod
+    def cancel_order(cls, order_id):
+        return cls(action="cancel", order_id=order_id).pack()
 
-    @property
-    def CONFIRM(self):
-        return OrderCallback(action="confirm", order_id=self.order_id).pack()
+    @classmethod
+    def confirm_order(cls, order_id):
+        return cls(action="confirm", order_id=order_id).pack()
+
+    @classmethod
+    def edit_street(cls):
+        return cls(action="edit_street").pack()
 
 
 class CategoryNavigationCallback(CallbackData, prefix="category"):
-    action: Literal["list"]
-    category: Literal["pizza", "snack", "drink"]
+    action: CATEGORY_COMMANDS
 
     @property
     def PIZZAS(self):
-        return CategoryNavigationCallback(category="pizza", action="list").pack()
+        return CategoryNavigationCallback(action="pizza").pack()
 
     @property
     def SNACKS(self):
-        return CategoryNavigationCallback(category="snack", action="list").pack()
+        return CategoryNavigationCallback(action="snack").pack()
 
     @property
     def DRINKS(self):
-        return CategoryNavigationCallback(category="drink", action="list").pack()
+        return CategoryNavigationCallback(action="drink").pack()
 
 
 class CartCallback(CallbackData, prefix="cart"):
-    action: Literal["increase", "decrease", "erase_all", "delete", "make_order"]
+    action: CART_COMMANDS
     product_id: int | None = None
-    size: Literal["small", "large", None] = None
+    size: SIZES_AVAILABLE | None = None
 
     @classmethod
     def increase(cls, product_id: int, size: SIZES_AVAILABLE):
@@ -94,9 +117,9 @@ class CartCallback(CallbackData, prefix="cart"):
 
 
 class ProductCallback(CallbackData, prefix="product"):
-    action: Literal["add_to_cart", "view_product_details"]
+    action: PRODUCT_COMMANDS
     product_id: int
-    size: Literal["small", "large", None] = None
+    size: SIZES_AVAILABLE | None = None
 
     @classmethod
     def view_product_details(cls, product_id: int):
@@ -112,20 +135,8 @@ class ProductCallback(CallbackData, prefix="product"):
 
 
 class AdminCallback(CallbackData, prefix="admin"):
-    action: Literal[
-        "add_product",
-        "edit_product",
-        "delete_product",
-        "confirm_deleting_product",
-        "admin_list",
-        "test_functions",
-        "test_payment",
-        "check_db",
-        "get_admin_info",
-        "create_admin",
-        "dismiss_admin",
-    ]
-    product_category: Literal["pizza", "snack", "drink", "cake", None] = None
+    action: ADMIN_COMMANDS
+    product_category: CATEGORIES_AVAILABLE | None = None
     editing_field: Literal[
         "name",
         "description",
@@ -175,7 +186,7 @@ class AdminCallback(CallbackData, prefix="admin"):
 
     @property
     def DELETE_PRODUCT(self):
-        return AdminCallback(action="delete_product").pack()
+        return AdminCallback(action="delete_product", product_id=None).pack()
 
     @classmethod
     def delete_product(cls, product_id: int):
@@ -183,7 +194,7 @@ class AdminCallback(CallbackData, prefix="admin"):
 
     @classmethod
     def confirm_deleting_product(cls, product_id: int):
-        return cls(action="delete_product", product_id=product_id).pack()
+        return cls(action="confirm_deleting_product", product_id=product_id).pack()
 
     @property
     def ADMIN_LIST(self):
@@ -212,3 +223,15 @@ class AdminCallback(CallbackData, prefix="admin"):
     @property
     def CHECK_DB(self):
         return AdminCallback(action="check_db").pack()
+
+
+class PaymentCallback(CallbackData, prefix="payment"):
+    action: PAYMENT_COMMANDS
+
+    @property
+    def CONFIRM_PAYMENT(self):
+        return PaymentCallback(action="confirm_payment").pack()
+
+    @property
+    def CANCEL_PAYMENT(self):
+        return PaymentCallback(action="cancel_payment").pack()

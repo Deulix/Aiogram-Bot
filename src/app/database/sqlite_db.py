@@ -198,8 +198,8 @@ class AsyncSQLiteDatabase:
 
     async def get_product_by_id(self, product_id) -> Product | None:
         async with self.AsyncSession() as session:
-            result = await session.get(Product, product_id)
-            return result
+            product = await session.get(Product, product_id)
+            return product
 
     async def get_user_by_id(self, user_id) -> User | None:
         async with self.AsyncSession() as session:
