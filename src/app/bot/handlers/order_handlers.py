@@ -6,7 +6,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from redis import Redis
 
-from src.app.bot.keyboards import order_keyboards as ord_kb
+from src.app.bot.keyboards import ord_kb
 from src.app.bot.services.cart_service import Cart, get_cart_items
 from src.app.bot.utils.validators import validate_street_api
 from src.app.database.models import Product

@@ -33,7 +33,7 @@ class AsyncSQLiteDatabase:
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
-                    is_admin=(id == settings.ADMIN_ID),
+                    is_admin=(user_id == settings.ADMIN_ID),
                 )
 
                 session.add(new_user)
@@ -48,9 +48,7 @@ class AsyncSQLiteDatabase:
 
     async def update_user(self, tg_user: TgUser) -> User | None:
         async with self.AsyncSession() as session:
-            stmt = select(User).where(User.id == tg_user.id)
-            result = await session.execute(stmt)
-            db_user = result.scalar_one_or_none()
+            db_user: User = await session.get(User, tg_user.id)
             try:
                 if (
                     db_user.username != tg_user.username

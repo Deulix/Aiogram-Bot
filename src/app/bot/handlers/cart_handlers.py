@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from redis.asyncio import Redis
 
-from src.app.bot.keyboards import navigation_keyboards as nav_kb
+from src.app.bot.keyboards import nav_kb
 from src.app.bot.services.cart_service import Cart, get_cart_items, getall
 from src.app.database.models import Product
 from src.app.database.sqlite_db import AsyncSQLiteDatabase

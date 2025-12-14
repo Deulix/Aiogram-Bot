@@ -4,9 +4,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from redis.asyncio import Redis
 
-from src.app.bot.keyboards import admin_keyboards as adm_kb
-from src.app.bot.keyboards import navigation_keyboards as nav_kb
-from src.app.bot.keyboards import testing_keyboards as tst_kb
+from src.app.bot.core.callbacks import AdminCallback
+from src.app.bot.keyboards import adm_kb, nav_kb, tst_kb
 from src.app.config.logger import logger
 from src.app.config.settings import settings
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
@@ -14,7 +13,7 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 admin_router = Router()
 
 
-@admin_router.callback_query(F.data == "admin")
+@admin_router.callback_query(AdminCallback.filter(action="admin"))
 async def cmd_handle_admin(
     callback: CallbackQuery, state: FSMContext, db: AsyncSQLiteDatabase
 ):
@@ -34,7 +33,7 @@ async def cmd_handle_admin(
         )
 
 
-@admin_router.callback_query(F.data == "db_check")
+@admin_router.callback_query(AdminCallback.filter(action="check_db"))
 async def cmd_handle_redis(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
@@ -50,7 +49,7 @@ async def cmd_handle_redis(
 
 
 class AddProduct(StatesGroup):
-    choose_type = State()
+    choose_category = State()
     add_name = State()
     add_price_small_size = State()
     add_price_large_size = State()
@@ -71,20 +70,25 @@ class AddProduct(StatesGroup):
 #     emoji: str
 
 
-@admin_router.callback_query(F.data == "product_create")
+@admin_router.callback_query(
+    AdminCallback.filter(action="add_product", product_category=None)
+)
 async def cmd_product_create(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
-        "ДОБАВЛЕНИЕ ТОВАРА \nВыберите тип товара:",
+        "ДОБАВЛЕНИЕ ТОВАРА \nВыберите категорию товара:",
         reply_markup=await adm_kb.create_product(),
     )
-    await state.set_state(AddProduct.choose_type)
+    await state.set_state(AddProduct.choose_category)
 
 
 @admin_router.callback_query(
-    AddProduct.choose_type, F.data.startswith("product_create_")
+    AddProduct.choose_category,
+    AdminCallback.filter(action="add_product", product_category=F.is_not(None)),
 )
-async def state_product_create_choose_type(callback: CallbackQuery, state: FSMContext):
-    category = callback.data.split("_")[-1]
+async def state_product_create_choose_category(
+    callback: CallbackQuery, callback_data: AdminCallback, state: FSMContext
+):
+    category = callback_data.product_category
     await state.update_data(category=category)
     categories = {
         "pizza": ("пицца", "🍕"),
@@ -92,6 +96,7 @@ async def state_product_create_choose_type(callback: CallbackQuery, state: FSMCo
         "drink": ("напиток", "🥤"),
         "cake": ("тортик", "🍰"),
     }
+
     await state.update_data(category_rus=categories[category][0])
     await state.update_data(emoji=categories[category][1])
     await state.set_state(AddProduct.add_name)
@@ -201,7 +206,9 @@ async def state_product_create_add_nutrition(
     )
 
 
-@admin_router.callback_query(F.data == "product_delete")
+@admin_router.callback_query(
+    AdminCallback.filter(action="delete_product", product_id=None)
+)
 async def cmd_product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
     await callback.message.edit_text(
@@ -210,21 +217,27 @@ async def cmd_product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     )
 
 
-@admin_router.callback_query(F.data.startswith("product_delete_"))
-async def cmd_product_confirm_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
-    product_id = callback.data.split("_")[-1]
+@admin_router.callback_query(
+    AdminCallback.filter(action="delete_product", product_id=F.is_not(None))
+)
+async def cmd_product_confirm_delete(
+    callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
+):
+    product_id = callback_data.product_id
     product = await db.get_product_by_id(product_id)
     await callback.message.edit_text(
         f"УДАЛЕНИЕ ТОВАРА \nВы уверены, что хотите удалить {product.emoji} {product.name}?",
-        reply_markup=await adm_kb.product_confirmed_delete(product.id),
+        reply_markup=await adm_kb.confirm_deleting_product(product.id),
     )
 
 
-@admin_router.callback_query(F.data.startswith("product_confirmed_delete_"))
+@admin_router.callback_query(
+    AdminCallback.filter(action="confirm_deleting_product", product_id=F.is_not(None))
+)
 async def cmd_product_confirmed_delete(
-    callback: CallbackQuery, db: AsyncSQLiteDatabase
+    callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
 ):
-    product_id = callback.data.split("_")[-1]
+    product_id = callback_data.product_id
     product = await db.get_product_by_id(product_id)
     await db.delete_product(product.id)
     await callback.message.edit_text(
@@ -237,7 +250,7 @@ class EditProduct(StatesGroup):
     edit = State()
 
 
-@admin_router.callback_query(F.data == "product_edit")
+@admin_router.callback_query(AdminCallback.filter(action="edit_product"))
 async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
     await callback.message.edit_text(
@@ -246,11 +259,11 @@ async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     )
 
 
-@admin_router.callback_query(F.data.startswith("product_edit_"))
+@admin_router.callback_query(AdminCallback.filter(action="edit_product"))
 async def cmd_product_edit_choose(
-    callback: CallbackQuery, db: AsyncSQLiteDatabase, state: FSMContext
+    callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
 ):
-    product_id = callback.data.split("_")[-1]
+    product_id = callback_data.product_id
     product = await db.get_product_by_id(product_id)
     await callback.message.edit_text(
         "РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите значение из списка для изменения",
@@ -258,12 +271,15 @@ async def cmd_product_edit_choose(
     )
 
 
-@admin_router.callback_query(F.data.startswith("product_parameter_edit_"))
-async def cmd_product_edit_choose(callback: CallbackQuery, state: FSMContext):  # noqa: F811
-    parts = callback.data.split("_")
-    product_id = parts[-1]
-    product_parameter = parts[-2].replace("-", "_")
-    await state.update_data(product_id=product_id, product_parameter=product_parameter)
+@admin_router.callback_query(
+    AdminCallback.filter(action="edit_field", editing_field=F.is_not(None))
+)
+async def cmd_product_edit_choose(  # noqa: F811
+    callback: CallbackQuery, callback_data: AdminCallback, state: FSMContext
+):
+    product_id = callback_data.product_id
+    editing_field = callback_data.editing_field
+    await state.update_data(product_id=product_id, editing_field=editing_field)
     await callback.message.edit_text(
         "РЕДАКТИРОВАНИЕ ТОВАРА \nВведите новое значение:",
         reply_markup=await adm_kb.cancel_admin_action("edit"),
@@ -272,14 +288,14 @@ async def cmd_product_edit_choose(callback: CallbackQuery, state: FSMContext):  
 
 
 @admin_router.message(EditProduct.edit)
-async def cmd_product_edit_enter_new(
+async def product_edit_set_new(
     message: Message, db: AsyncSQLiteDatabase, state: FSMContext
 ):
     data = await state.get_data()
     product_id = data["product_id"]
     product = await db.get_product_by_id(product_id)
-    product_parameter = data["product_parameter"]
-    parameter_dict = {
+    editing_field = data["editing_field"]
+    field_dict = {
         "name": "НАЗВАНИЕ",
         "price_small": "ЦЕНА ЗА СТАНДАРТ",
         "price_large": "ЦЕНА ЗА БОЛЬШОЙ(УЮ)",
@@ -288,20 +304,22 @@ async def cmd_product_edit_enter_new(
         "ingredients": "ИНГРЕДИЕНТЫ",
         "nutrition": "КБЖУ",
     }
-    parameter_name = parameter_dict[product_parameter]
-    new_parameter_value = message.text
-    await db.edit_product(product_id, product_parameter, new_parameter_value)
+    field_name = field_dict[editing_field]
+    new_field_value = message.text
+    await db.edit_product(product_id, editing_field, new_field_value)
     await message.answer(
-        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВыбрано новое значение:\nНовое значение {parameter_name}: {new_parameter_value}",
+        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВыбрано новое значение:\nНовое значение {field_name}: {new_field_value}",
         reply_markup=await adm_kb.product_edit_choose(product),
     )
     await state.set_state(EditProduct.edit)
 
 
-@admin_router.callback_query(F.data.startswith("admin_id_"))
-async def get_admin_info(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+@admin_router.callback_query(AdminCallback.filter(action="get_admin_info"))
+async def get_admin_info(
+    callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
+):
     can_dismiss = False
-    admin_id = callback.data.split("_")[-1]
+    admin_id = callback_data.user_id
     admin = await db.get_user_by_id(admin_id)
     if (
         callback.from_user.id
@@ -309,7 +327,7 @@ async def get_admin_info(callback: CallbackQuery, db: AsyncSQLiteDatabase):
             settings.ADMIN_ID,
             admin.id,
         ]
-    ):  # Даём право снимать админку, если метод вызывает суперадминистратор или админ снимает себя
+    ):  # Даём право снимать админку, если метод вызывает суперадминистратор (но его самого нельзя снять) или админ снимает себя
         can_dismiss = True
     await callback.message.edit_text(
         f"ИНФОРМАЦИЯ ОБ АДМИНИСТРАТОРЕ\n\nID: {admin.id}\nUsername: @{admin.username}\nИмя: {admin.first_name}\n{f'Фамилия: {admin.last_name}\n' if admin.last_name else ''}",
@@ -321,7 +339,7 @@ class AdminCreation(StatesGroup):
     create = State()
 
 
-@admin_router.callback_query(F.data == "admin_list")
+@admin_router.callback_query(AdminCallback.filter(action="admin_list"))
 async def admin_list(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     admins = await db.get_admins()
     callback_user = callback.from_user
@@ -331,7 +349,7 @@ async def admin_list(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     )
 
 
-@admin_router.callback_query(F.data == "admin_create")
+@admin_router.callback_query(AdminCallback.filter(action="create_admin"))
 async def input_admin_id(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         "ДОБАВЛЕНИЕ АДМИНИСТРАТОРА\n\nВведите ID нового администратора:",
@@ -363,11 +381,16 @@ async def make_admin(message: Message, state: FSMContext, db: AsyncSQLiteDatabas
         await state.clear()
 
 
-@admin_router.callback_query(F.data.startswith("dismiss_admin_"))
+@admin_router.callback_query(
+    AdminCallback.filter(action="dismiss_admin", user_id=F.is_not(None))
+)
 async def dismiss_admin(
-    callback: CallbackQuery, state: FSMContext, db: AsyncSQLiteDatabase
+    callback: CallbackQuery,
+    callback_data: AdminCallback,
+    state: FSMContext,
+    db: AsyncSQLiteDatabase,
 ):
-    admin_id = callback.data.split("_")[-1]
+    admin_id = callback_data.user_id
     if int(admin_id) == settings.ADMIN_ID:
         await callback.message.edit_text(
             "УДАЛЕНИЕ АДМИНИСТРАТОРА\n\n❌ ОШИБКА! Суперадминистратор не может быть снят.",
@@ -384,7 +407,7 @@ async def dismiss_admin(
         await state.clear()
 
 
-@admin_router.callback_query(F.data == "tests")
+@admin_router.callback_query(AdminCallback.filter(action="test_functions"))
 async def tests(callback: CallbackQuery):
     await callback.message.edit_text(
         "ТЕСТЫ\n\nВведите тест из списка:",

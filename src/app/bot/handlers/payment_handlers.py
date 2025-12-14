@@ -3,7 +3,8 @@ import asyncio
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 
-from src.app.bot.keyboards import navigation_keyboards as nav_kb
+from src.app.bot.core.callbacks import AdminCallback
+from src.app.bot.keyboards import nav_kb
 from src.app.config.logger import logger
 from src.app.config.settings import settings
 from src.app.database.models import OrderItem
@@ -12,14 +13,14 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 payment_router = Router()
 
 
-@payment_router.callback_query(F.data == "test_payment_link")
-async def test_payment(message: Message):
+@payment_router.callback_query(AdminCallback.filter(action="test_payment"))
+async def test_payment(callback: CallbackQuery):
     prices = [
         LabeledPrice(label="Пицца ТЕСТ", amount=50000),
         LabeledPrice(label="Доставка ТЕСТ", amount=2000),
     ]
-    await message.bot.send_invoice(
-        chat_id=message.from_user.id,
+    await callback.message.bot.send_invoice(
+        chat_id=callback.message.from_user.id,
         title="Заказ пиццы ТЕСТ",
         description="Пицца c доставкой ТЕСТ",
         payload="order_123",
