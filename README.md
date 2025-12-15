@@ -42,20 +42,23 @@ MAPS_API_KEY=your_redis_port # ваш токен (ключ) от Yandex JavaScri
 Aiogram-Bot/
 ├── alembic/
 │   ├── versions/
-│   │   ├── ...
+│   │   └── ...
 │   ├── env.py
 │   ├── README
 │   └── script.py.mako
+├── images/
+│   └── ...
 ├── logs/
-│   └── bot_history.log
+│   └── ...
 ├── src/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── routers/
+│   │   │   │   └── ...
 │   │   │   ├── services/
-│   │   │   │   └── user_service.py
+│   │   │   │   └── ...
 │   │   │   ├── templates/
-│   │   │   │   └── index.html
+│   │   │   │   └── ...
 │   │   │   └── main.py # Вход в API
 │   │   ├── bot/
 │   │   │   ├── core/
