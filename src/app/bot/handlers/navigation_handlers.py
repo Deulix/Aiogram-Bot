@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from redis.asyncio import Redis
 
-from app.bot.core.callbacks import (
+from src.app.bot.core.callbacks import (
     CategoryNavigationCallback,
     MenuNavigationCallback,
     ProductCallback,
@@ -17,7 +17,9 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 navigation_router = Router()
 
 
-@navigation_router.callback_query(MenuNavigationCallback.filter(action="main_menu"))
+@navigation_router.callback_query(
+    MenuNavigationCallback.filter(F.action == "main_menu")
+)
 @navigation_router.message(CommandStart())
 async def start(
     event: Message | CallbackQuery, db: AsyncSQLiteDatabase, state: FSMContext
@@ -46,7 +48,20 @@ async def start(
         )
 
 
-@navigation_router.callback_query(CategoryNavigationCallback.filter(action="list"))
+@navigation_router.callback_query(MenuNavigationCallback.filter(F.action == "catalog"))
+async def catalog_menu(
+    callback: CallbackQuery,
+    callback_data: CategoryNavigationCallback,
+):
+    await callback.message.edit_text(
+        ("Для продолжения заказа выбери пункт меню:"),
+        reply_markup=(await nav_kb.catalog()),
+    )
+
+
+@navigation_router.callback_query(
+    CategoryNavigationCallback.filter(F.action.is_not(None))
+)
 async def category_menu(
     callback: CallbackQuery,
     callback_data: CategoryNavigationCallback,
@@ -55,7 +70,7 @@ async def category_menu(
 ):
     category = callback_data.action
     products: list[Product] = await db.get_products_by_category(category)
-    cart = Cart(user_id=callback.from_user.id, redis=redis)
+    cart = Cart(callback.from_user.id, redis, db)
     cart_amount = await cart.get_current_price_amount()
     await callback.message.edit_text(
         (
@@ -71,7 +86,9 @@ async def menu_contacts(callback: CallbackQuery):
     await callback.answer("Контакты:\n+375291112233", show_alert=True)
 
 
-@navigation_router.callback_query(ProductCallback.filter(action="view_product_details"))
+@navigation_router.callback_query(
+    ProductCallback.filter(F.action == "view_product_details")
+)
 async def product_info(
     callback: CallbackQuery, callback_data: ProductCallback, db: AsyncSQLiteDatabase
 ):

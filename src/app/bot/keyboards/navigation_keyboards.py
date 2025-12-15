@@ -3,7 +3,7 @@ from typing import Literal
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.bot.core.callbacks import (
+from src.app.bot.core.callbacks import (
     CartCallback,
     CategoryNavigationCallback,
     MenuNavigationCallback,
@@ -16,23 +16,23 @@ async def main_menu(user: User):
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
         InlineKeyboardButton(
-            text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG
+            text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG()
         ),
         InlineKeyboardButton(
-            text="👤 Мои заказы", callback_data=MenuNavigationCallback.ORDERS
+            text="👤 Мои заказы", callback_data=MenuNavigationCallback.ORDERS()
         ),
         InlineKeyboardButton(
-            text="🛒 Корзина", callback_data=MenuNavigationCallback.CART
+            text="🛒 Корзина", callback_data=MenuNavigationCallback.CART()
         ),
         InlineKeyboardButton(
-            text="📞 Контакты", callback_data=MenuNavigationCallback.CONTACTS
+            text="📞 Контакты", callback_data=MenuNavigationCallback.CONTACTS()
         ),
     )
     keyboard.adjust(1, 1, 2, 1)
     if user.is_admin:
-        keyboard.add(
+        keyboard.row(
             InlineKeyboardButton(
-                text="👺 АДМИНПАНЕЛЬ", callback_data=MenuNavigationCallback.ADMIN
+                text="👺 АДМИНПАНЕЛЬ", callback_data=MenuNavigationCallback.ADMIN()
             )
         )
     return keyboard.as_markup()
@@ -42,16 +42,16 @@ async def catalog():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
         InlineKeyboardButton(
-            text="🍕 Пиццы", callback_data=CategoryNavigationCallback.PIZZAS
+            text="🍕 Пиццы", callback_data=CategoryNavigationCallback.PIZZAS()
         ),
         InlineKeyboardButton(
-            text="🍟 Закуски", callback_data=CategoryNavigationCallback.SNACKS
+            text="🍟 Закуски", callback_data=CategoryNavigationCallback.SNACKS()
         ),
         InlineKeyboardButton(
-            text="🥤 Напитки", callback_data=CategoryNavigationCallback.DRINKS
+            text="🥤 Напитки", callback_data=CategoryNavigationCallback.DRINKS()
         ),
         InlineKeyboardButton(
-            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU()
         ),
     )
     return keyboard.adjust(1, 2, 1).as_markup()
@@ -80,10 +80,10 @@ async def init_category_menu(products: list[Product]):
 
     keyboard.row(
         InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=MenuNavigationCallback.CATALOG
+            text="⬅️ Назад", callback_data=MenuNavigationCallback.CATALOG()
         ),
         InlineKeyboardButton(
-            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU()
         ),
     )
     return keyboard.as_markup()
@@ -114,44 +114,46 @@ async def init_cart(cart_items: tuple, cart_amount: float):
                     callback_data=(
                         CartCallback.decrease(product.id, product_size)
                         if int(quantity) > 1 or len(cart_items) > 1
-                        else CartCallback.ERASE_ALL
+                        else CartCallback.ERASE_ALL()
                     ),
                 ),
                 InlineKeyboardButton(
                     text="❌",
                     callback_data=(
-                        CartCallback.delete(product.id)
+                        CartCallback.delete(product.id, product_size)
                         if len(cart_items) > 1
-                        else CartCallback.ERASE_ALL
+                        else CartCallback.ERASE_ALL()
                     ),
                 ),
             )
         keyboard.row(
             InlineKeyboardButton(
                 text=f"✅ Оформить заказ ({float(cart_amount):.2f} BYN)",
-                callback_data=CartCallback.MAKE_ORDER,
+                callback_data=CartCallback.MAKE_ORDER(),
             )
         )
         keyboard.row(
             InlineKeyboardButton(
-                text="🗑️ Очистить корзину", callback_data=CartCallback.ERASE_ALL
+                text="🗑️ Очистить корзину", callback_data=CartCallback.ERASE_ALL()
             )
         )
         keyboard.row(
             InlineKeyboardButton(
-                text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG
+                text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG()
             ),
             InlineKeyboardButton(
-                text="⏪ Главное меню ", callback_data=MenuNavigationCallback.MAIN_MENU
+                text="⏪ Главное меню ",
+                callback_data=MenuNavigationCallback.MAIN_MENU(),
             ),
         )
     else:
         keyboard.add(
             InlineKeyboardButton(
-                text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG
+                text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG()
             ),
             InlineKeyboardButton(
-                text="⏪ Главное меню ", callback_data=MenuNavigationCallback.MAIN_MENU
+                text="⏪ Главное меню ",
+                callback_data=MenuNavigationCallback.MAIN_MENU(),
             ),
         )
         keyboard.adjust(1)

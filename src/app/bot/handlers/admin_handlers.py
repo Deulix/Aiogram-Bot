@@ -4,7 +4,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from redis.asyncio import Redis
 
-from src.app.bot.core.callbacks import AdminCallback
+from src.app.bot.core.callbacks import AdminCallback, MenuNavigationCallback
 from src.app.bot.keyboards import adm_kb, nav_kb, tst_kb
 from src.app.config.logger import logger
 from src.app.config.settings import settings
@@ -13,7 +13,7 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 admin_router = Router()
 
 
-@admin_router.callback_query(AdminCallback.filter(action="admin"))
+@admin_router.callback_query(MenuNavigationCallback.filter(F.action == "admin"))
 async def cmd_handle_admin(
     callback: CallbackQuery, state: FSMContext, db: AsyncSQLiteDatabase
 ):
@@ -33,7 +33,7 @@ async def cmd_handle_admin(
         )
 
 
-@admin_router.callback_query(AdminCallback.filter(action="check_db"))
+@admin_router.callback_query(AdminCallback.filter(F.action == "check_db"))
 async def cmd_handle_redis(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase
 ):
@@ -71,7 +71,7 @@ class AddProduct(StatesGroup):
 
 
 @admin_router.callback_query(
-    AdminCallback.filter(action="add_product", product_category=None)
+    AdminCallback.filter((F.action == "add_product") & (F.product_category.is_(None)))
 )
 async def cmd_product_create(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
@@ -83,7 +83,9 @@ async def cmd_product_create(callback: CallbackQuery, state: FSMContext):
 
 @admin_router.callback_query(
     AddProduct.choose_category,
-    AdminCallback.filter(action="add_product", product_category=F.is_not(None)),
+    AdminCallback.filter(
+        (F.action == "add_product") & (F.product_category.is_not(None))
+    ),
 )
 async def state_product_create_choose_category(
     callback: CallbackQuery, callback_data: AdminCallback, state: FSMContext
@@ -207,7 +209,7 @@ async def state_product_create_add_nutrition(
 
 
 @admin_router.callback_query(
-    AdminCallback.filter(action="delete_product", product_id=None)
+    AdminCallback.filter((F.action == "delete_product") & (F.product_id.is_not(None)))
 )
 async def cmd_product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
@@ -218,7 +220,7 @@ async def cmd_product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
 
 
 @admin_router.callback_query(
-    AdminCallback.filter(action="delete_product", product_id=F.is_not(None))
+    AdminCallback.filter((F.action == "delete_product") & (F.product_id.is_not(None)))
 )
 async def cmd_product_confirm_delete(
     callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
@@ -232,7 +234,9 @@ async def cmd_product_confirm_delete(
 
 
 @admin_router.callback_query(
-    AdminCallback.filter(action="confirm_deleting_product", product_id=F.is_not(None))
+    AdminCallback.filter(
+        (F.action == "confirm_deleting_product") & (F.product_id.is_not(None))
+    )
 )
 async def cmd_product_confirmed_delete(
     callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
@@ -250,7 +254,7 @@ class EditProduct(StatesGroup):
     edit = State()
 
 
-@admin_router.callback_query(AdminCallback.filter(action="edit_product"))
+@admin_router.callback_query(AdminCallback.filter(F.action == "edit_product"))
 async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
     await callback.message.edit_text(
@@ -259,7 +263,7 @@ async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     )
 
 
-@admin_router.callback_query(AdminCallback.filter(action="edit_product"))
+@admin_router.callback_query(AdminCallback.filter(F.action == "edit_product"))
 async def cmd_product_edit_choose(
     callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
 ):
@@ -272,7 +276,7 @@ async def cmd_product_edit_choose(
 
 
 @admin_router.callback_query(
-    AdminCallback.filter(action="edit_field", editing_field=F.is_not(None))
+    AdminCallback.filter((F.action == "edit_field") & (F.editing_field.is_not(None)))
 )
 async def cmd_product_edit_choose(  # noqa: F811
     callback: CallbackQuery, callback_data: AdminCallback, state: FSMContext
@@ -314,7 +318,7 @@ async def product_edit_set_new(
     await state.set_state(EditProduct.edit)
 
 
-@admin_router.callback_query(AdminCallback.filter(action="get_admin_info"))
+@admin_router.callback_query(AdminCallback.filter(F.action == "get_admin_info"))
 async def get_admin_info(
     callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
 ):
@@ -339,7 +343,7 @@ class AdminCreation(StatesGroup):
     create = State()
 
 
-@admin_router.callback_query(AdminCallback.filter(action="admin_list"))
+@admin_router.callback_query(AdminCallback.filter(F.action == "admin_list"))
 async def admin_list(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     admins = await db.get_admins()
     callback_user = callback.from_user
@@ -349,7 +353,7 @@ async def admin_list(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     )
 
 
-@admin_router.callback_query(AdminCallback.filter(action="create_admin"))
+@admin_router.callback_query(AdminCallback.filter(F.action == "create_admin"))
 async def input_admin_id(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         "ДОБАВЛЕНИЕ АДМИНИСТРАТОРА\n\nВведите ID нового администратора:",
@@ -382,7 +386,7 @@ async def make_admin(message: Message, state: FSMContext, db: AsyncSQLiteDatabas
 
 
 @admin_router.callback_query(
-    AdminCallback.filter(action="dismiss_admin", user_id=F.is_not(None))
+    AdminCallback.filter((F.action == "dismiss_admin") & (F.user_id.is_not(None)))
 )
 async def dismiss_admin(
     callback: CallbackQuery,
@@ -407,7 +411,7 @@ async def dismiss_admin(
         await state.clear()
 
 
-@admin_router.callback_query(AdminCallback.filter(action="test_functions"))
+@admin_router.callback_query(AdminCallback.filter(F.action == "test_functions"))
 async def tests(callback: CallbackQuery):
     await callback.message.edit_text(
         "ТЕСТЫ\n\nВведите тест из списка:",

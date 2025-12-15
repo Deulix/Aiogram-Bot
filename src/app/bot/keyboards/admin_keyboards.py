@@ -9,23 +9,24 @@ async def admin():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
         InlineKeyboardButton(
-            text="✙ Добавить продукт", callback_data=AdminCallback.ADD_PRODUCT
+            text="✙ Добавить продукт", callback_data=AdminCallback.ADD_PRODUCT()
         ),
         InlineKeyboardButton(
-            text="🖍️ Изменить продукт", callback_data=AdminCallback.EDIT_PRODUCT
+            text="🖍️ Изменить продукт", callback_data=AdminCallback.EDIT_PRODUCT()
         ),
         InlineKeyboardButton(
-            text="❌ Удалить продукт", callback_data=AdminCallback.DELETE_PRODUCT
+            text="❌ Удалить продукт", callback_data=AdminCallback.DELETE_PRODUCT()
         ),
         InlineKeyboardButton(
-            text="🛑 Права суперпользователя 🛑", callback_data=AdminCallback.ADMIN_LIST
+            text="🛑 Права суперпользователя 🛑",
+            callback_data=AdminCallback.ADMIN_LIST(),
         ),
         InlineKeyboardButton(
-            text="🛠️ Тесты", callback_data=AdminCallback.TEST_FUNCTIONS
+            text="🛠️ Тесты", callback_data=AdminCallback.TEST_FUNCTIONS()
         ),
         InlineKeyboardButton(
             text="👤 В меню пользователя",
-            callback_data=MenuNavigationCallback.MAIN_MENU,
+            callback_data=MenuNavigationCallback.MAIN_MENU(),
         ),
     )
     return keyboard.adjust(1).as_markup()
@@ -51,7 +52,7 @@ async def create_product():
             callback_data=AdminCallback.add_product("cake"),
         ),
         InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN
+            text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN()
         ),
     )
     return keyboard.adjust(1).as_markup()
@@ -78,7 +79,7 @@ async def cancel_admin_action(action=""):
     keyboard.add(
         InlineKeyboardButton(
             text=f"🛑 Отмена {text_map[action]}",
-            callback_data=MenuNavigationCallback.ADMIN,
+            callback_data=MenuNavigationCallback.ADMIN(),
         ),
     )
     return keyboard.adjust().as_markup()
@@ -94,10 +95,10 @@ async def admin_list(admins: list[User], callback_user: User):
     keyboard.add(
         InlineKeyboardButton(
             text="Добавить нового администратора",
-            callback_data=AdminCallback.CREATE_ADMIN,
+            callback_data=AdminCallback.CREATE_ADMIN(),
         ),
         InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN
+            text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN()
         ),
     )
     return keyboard.adjust(1).as_markup()
@@ -114,7 +115,9 @@ async def product_delete(products: list[Product]):
         )
     keyboard.adjust(2)
     keyboard.row(
-        InlineKeyboardButton(text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN)
+        InlineKeyboardButton(
+            text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN()
+        )
     )
     return keyboard.as_markup()
 
@@ -127,7 +130,7 @@ async def confirm_deleting_product(product_id: int):
             callback_data=AdminCallback.confirm_deleting_product(product_id),
         ),
         InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=AdminCallback.DELETE_PRODUCT
+            text="⬅️ Назад", callback_data=AdminCallback.DELETE_PRODUCT()
         ),
     )
 
@@ -145,7 +148,9 @@ async def product_edit(products: list[Product]):
         )
     keyboard.adjust(2)
     keyboard.row(
-        InlineKeyboardButton(text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN)
+        InlineKeyboardButton(
+            text="⬅️ Назад", callback_data=MenuNavigationCallback.ADMIN()
+        )
     )
     return keyboard.as_markup()
 
@@ -185,9 +190,11 @@ async def product_edit_choose(product: Product):
 
     keyboard.adjust(1)
     keyboard.row(
-        InlineKeyboardButton(text="⬅️ Назад", callback_data=AdminCallback.EDIT_PRODUCT),
         InlineKeyboardButton(
-            text="⏪ Админпанель", callback_data=MenuNavigationCallback.ADMIN
+            text="⬅️ Назад", callback_data=AdminCallback.EDIT_PRODUCT()
+        ),
+        InlineKeyboardButton(
+            text="⏪ Админпанель", callback_data=MenuNavigationCallback.ADMIN()
         ),
     )
 
@@ -204,6 +211,6 @@ async def back_to_admin_list(can_dismiss, admin_id):
             )
         )
     keyboard.add(
-        InlineKeyboardButton(text="⬅️ Назад", callback_data=AdminCallback.ADMIN_LIST)
+        InlineKeyboardButton(text="⬅️ Назад", callback_data=AdminCallback.ADMIN_LIST())
     )
     return keyboard.adjust(1).as_markup()

@@ -18,6 +18,7 @@ class Cart:
         cart_items = []
         for item_key, quantity in dict_cart_items.items():
             _, product_id, size = item_key.split(":")
+            quantity = int(quantity)
             product = await self.db.get_product_by_id(product_id)
             cart_items.append((product, size, quantity))
         category_order = ["pizza", "snack", "cake", "drink"]
@@ -63,21 +64,17 @@ async def getall(
     db: AsyncSQLiteDatabase,
 ):
     user_id = callback.from_user.id
-    cart = Cart(user_id, redis)
+    cart = Cart(user_id, redis, db)
     product = await db.get_product_by_id(callback_data.product_id)
     size = callback_data.size
     product_key = f"product:{product.id}:{size}"
 
-    await cart.add_price_amount(product.get_size_price(size))
-
     products = await db.get_products_by_category(product.category)
-    quantity = await redis.hget(cart.cart_key, product_key)
 
     return (
         cart,
         product,
         size,
         products,
-        quantity,
         product_key,
     )

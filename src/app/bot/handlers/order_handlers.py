@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from redis import Redis
 
 from src.app.bot.core.callbacks import (
+    CartCallback,
     MenuNavigationCallback,
     OrderCallback,
 )
@@ -19,7 +20,7 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 order_router = Router()
 
 
-@order_router.callback_query(MenuNavigationCallback.filter(action="orders"))
+@order_router.callback_query(MenuNavigationCallback.filter(F.action == "orders"))
 async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     user_id = callback.from_user.id
     orders = await db.get_orders_by_user(user_id)
@@ -29,9 +30,11 @@ async def orders(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     )
 
 
-@order_router.callback_query(OrderCallback.filter(action="order_details"))
-async def order_details(callback: CallbackQuery, db: AsyncSQLiteDatabase):
-    order_id = callback.data.split("_")[-1]
+@order_router.callback_query(OrderCallback.filter(F.action == "order_details"))
+async def order_details(
+    callback: CallbackQuery, callback_data: OrderCallback, db: AsyncSQLiteDatabase
+):
+    order_id = callback_data.order_id
     order = await db.get_order_by_id(order_id)
     order_items = await db.get_order_items(order.id)
     order_items_text = []
@@ -70,8 +73,10 @@ class OrderStates(StatesGroup):
     additional_info = State()
 
 
-@order_router.callback_query(F.data == "make_order")
-async def order_start_creation(callback: CallbackQuery, state: FSMContext):
+@order_router.callback_query(CartCallback.filter(F.action == "make_order"))
+async def order_start_creation(
+    callback: CallbackQuery, callback_data: CartCallback, state: FSMContext
+):
     await callback.message.edit_text(
         "ОФОРМЛЕНИЕ ЗАКАЗА\n\nВведите ваше имя:",
         reply_markup=await ord_kb.cancel_order(),
@@ -105,7 +110,7 @@ async def client(message: Message, state: FSMContext):
         await state.set_state(OrderStates.phone)
 
 
-@order_router.callback_query(OrderCallback.filter(action="edit_street"))
+@order_router.callback_query(OrderCallback.filter(F.action == "edit_street"))
 async def edit_street(
     callback: CallbackQuery, callback_data: OrderCallback, state: FSMContext
 ):
@@ -316,7 +321,7 @@ async def additional_info(
     enterance = data["enterance"]
     additional_info = data["additional_info"]
 
-    cart = Cart(user_id=message.from_user.id, redis=redis)
+    cart = Cart(message.from_user.id, redis, db)
     cart_items = await cart.get_cart_items()
     amount = await cart.get_current_price_amount()
 

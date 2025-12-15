@@ -1,5 +1,11 @@
-from pydantic_settings import BaseSettings
 from pathlib import Path
+from typing import Literal
+
+from pydantic_settings import BaseSettings
+
+SIZES_AVAILABLE = Literal["small", "large"]
+
+CATEGORIES_AVAILABLE = Literal["pizza", "snack", "drink", "cake"]
 
 
 class Settings(BaseSettings):

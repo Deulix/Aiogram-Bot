@@ -2,7 +2,7 @@ from typing import Literal
 
 from aiogram.filters.callback_data import CallbackData
 
-from src.app.bot.core import CATEGORIES_AVAILABLE, SIZES_AVAILABLE
+from src.app.config.settings import CATEGORIES_AVAILABLE, SIZES_AVAILABLE
 
 MENU_COMMANDS = Literal["cart", "main_menu", "catalog", "contacts", "orders", "admin"]
 ORDER_COMMANDS = Literal["order_details", "cancel", "confirm", "edit_street"]
@@ -22,35 +22,35 @@ ADMIN_COMMANDS = Literal[
     "create_admin",
     "dismiss_admin",
 ]
-PAYMENT_COMMANDS = Literal["confirm_payment", "cancel_payment"]
+# PAYMENT_COMMANDS = Literal["start_payment", "confirm_payment", "cancel_payment"]
 
 
 class MenuNavigationCallback(CallbackData, prefix="menu"):
     action: MENU_COMMANDS
 
-    @property
-    def CART(self):
-        return MenuNavigationCallback(action="cart").pack()
+    @classmethod
+    def CART(cls):
+        return cls(action="cart").pack()
 
-    @property
-    def MAIN_MENU(self):
-        return MenuNavigationCallback(action="main_menu").pack()
+    @classmethod
+    def MAIN_MENU(cls):
+        return cls(action="main_menu").pack()
 
-    @property
-    def CATALOG(self):
-        return MenuNavigationCallback(action="catalog").pack()
+    @classmethod
+    def CATALOG(cls):
+        return cls(action="catalog").pack()
 
-    @property
-    def CONTACTS(self):
-        return MenuNavigationCallback(action="contacts").pack()
+    @classmethod
+    def CONTACTS(cls):
+        return cls(action="contacts").pack()
 
-    @property
-    def ORDERS(self):
-        return MenuNavigationCallback(action="orders").pack()
+    @classmethod
+    def ORDERS(cls):
+        return cls(action="orders").pack()
 
-    @property
-    def ADMIN(self):
-        return MenuNavigationCallback(action="admin").pack()
+    @classmethod
+    def ADMIN(cls):
+        return cls(action="admin").pack()
 
 
 class OrderCallback(CallbackData, prefix="order"):
@@ -58,7 +58,7 @@ class OrderCallback(CallbackData, prefix="order"):
     order_id: int | None = None
 
     @classmethod
-    def order_details(cls, order_id):
+    def get_order_details(cls, order_id):
         return cls(action="order_details", order_id=order_id).pack()
 
     @classmethod
@@ -77,17 +77,17 @@ class OrderCallback(CallbackData, prefix="order"):
 class CategoryNavigationCallback(CallbackData, prefix="category"):
     action: CATEGORY_COMMANDS
 
-    @property
-    def PIZZAS(self):
-        return CategoryNavigationCallback(action="pizza").pack()
+    @classmethod
+    def PIZZAS(cls):
+        return cls(action="pizza").pack()
 
-    @property
-    def SNACKS(self):
-        return CategoryNavigationCallback(action="snack").pack()
+    @classmethod
+    def SNACKS(cls):
+        return cls(action="snack").pack()
 
-    @property
-    def DRINKS(self):
-        return CategoryNavigationCallback(action="drink").pack()
+    @classmethod
+    def DRINKS(cls):
+        return cls(action="drink").pack()
 
 
 class CartCallback(CallbackData, prefix="cart"):
@@ -107,13 +107,13 @@ class CartCallback(CallbackData, prefix="cart"):
     def delete(cls, product_id: int, size: SIZES_AVAILABLE):
         return cls(action="delete", product_id=product_id, size=size).pack()
 
-    @property
-    def ERASE_ALL(self):
-        return CartCallback(action="erase_all").pack()
+    @classmethod
+    def ERASE_ALL(cls):
+        return cls(action="erase_all").pack()
 
-    @property
-    def MAKE_ORDER(self):
-        return CartCallback(action="make_order").pack()
+    @classmethod
+    def MAKE_ORDER(cls):
+        return cls(action="make_order").pack()
 
 
 class ProductCallback(CallbackData, prefix="product"):
@@ -150,17 +150,17 @@ class AdminCallback(CallbackData, prefix="admin"):
     product_id: int | None = None
     user_id: int | None = None
 
-    @property
-    def ADD_PRODUCT(self):
-        return AdminCallback(action="add_product").pack()
+    @classmethod
+    def ADD_PRODUCT(cls):
+        return cls(action="add_product").pack()
 
     @classmethod
     def add_product(cls, product_category: CATEGORIES_AVAILABLE):
         return cls(action="add_product", product_category=product_category).pack()
 
-    @property
-    def EDIT_PRODUCT(self):
-        return AdminCallback(action="edit_product").pack()
+    @classmethod
+    def EDIT_PRODUCT(cls):
+        return cls(action="edit_product").pack()
 
     @classmethod
     def edit_product(cls, product_id: int):
@@ -184,9 +184,9 @@ class AdminCallback(CallbackData, prefix="admin"):
             action="edit_product", product_id=product_id, editing_field=field
         ).pack()
 
-    @property
-    def DELETE_PRODUCT(self):
-        return AdminCallback(action="delete_product", product_id=None).pack()
+    @classmethod
+    def DELETE_PRODUCT(cls):
+        return cls(action="delete_product", product_id=None).pack()
 
     @classmethod
     def delete_product(cls, product_id: int):
@@ -196,13 +196,13 @@ class AdminCallback(CallbackData, prefix="admin"):
     def confirm_deleting_product(cls, product_id: int):
         return cls(action="confirm_deleting_product", product_id=product_id).pack()
 
-    @property
-    def ADMIN_LIST(self):
-        return AdminCallback(action="admin_list").pack()
+    @classmethod
+    def ADMIN_LIST(cls):
+        return cls(action="admin_list").pack()
 
-    @property
-    def CREATE_ADMIN(self):
-        return AdminCallback(action="create_admin").pack()
+    @classmethod
+    def CREATE_ADMIN(cls):
+        return cls(action="create_admin").pack()
 
     @classmethod
     def create_admin(cls, user_id: int):
@@ -212,26 +212,30 @@ class AdminCallback(CallbackData, prefix="admin"):
     def dismiss_admin(cls, user_id: int):
         return cls(action="dismiss_admin", user_id=user_id).pack()
 
-    @property
-    def TEST_FUNCTIONS(self):
-        return AdminCallback(action="test_functions").pack()
+    @classmethod
+    def TEST_FUNCTIONS(cls):
+        return cls(action="test_functions").pack()
 
-    @property
-    def TEST_PAYMENT(self):
-        return AdminCallback(action="test_payment").pack()
+    @classmethod
+    def TEST_PAYMENT(cls):
+        return cls(action="test_payment").pack()
 
-    @property
-    def CHECK_DB(self):
-        return AdminCallback(action="check_db").pack()
+    @classmethod
+    def CHECK_DB(cls):
+        return cls(action="check_db").pack()
 
 
-class PaymentCallback(CallbackData, prefix="payment"):
-    action: PAYMENT_COMMANDS
+# class PaymentCallback(CallbackData, prefix="payment"):
+#     action: PAYMENT_COMMANDS
 
-    @property
-    def CONFIRM_PAYMENT(self):
-        return PaymentCallback(action="confirm_payment").pack()
+#     @classmethod
+#     def START_PAYMENT(cls):
+#         return cls(action="start_payment").pack()
 
-    @property
-    def CANCEL_PAYMENT(self):
-        return PaymentCallback(action="cancel_payment").pack()
+#     @classmethod
+#     def CONFIRM_PAYMENT(cls):
+#         return cls(action="confirm_payment").pack()
+
+#     @classmethod
+#     def CANCEL_PAYMENT(cls):
+#         return cls(action="cancel_payment").pack()

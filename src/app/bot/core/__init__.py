@@ -1,5 +1,3 @@
-from typing import Literal
-
 from .callbacks import (
     AdminCallback,
     CartCallback,
@@ -15,7 +13,3 @@ __all__ = [
     "MenuNavigationCallback",
     "ProductCallback",
 ]
-
-SIZES_AVAILABLE = Literal["small", "large"]
-
-CATEGORIES_AVAILABLE = Literal["pizza", "snack", "drink", "cake"]

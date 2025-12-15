@@ -40,30 +40,56 @@ MAPS_API_KEY=your_redis_port # ваш токен (ключ) от Yandex JavaScri
 ## 📁 Структура проекта
 ```bash
 Aiogram-Bot/
-
-├── alembic
-│   ├── versions
-│   │   └── ...
+├── alembic/
+│   ├── versions/
+│   │   ├── ...
 │   ├── env.py
 │   ├── README
 │   └── script.py.mako
-├── src
-│   ├── app
-│   │   ├── bot
-│   │   │   ├── handlers.py
-│   │   │   ├── keyboards.py
-│   │   │   └── payments.py
-│   │   ├── config
+├── logs/
+│   └── bot_history.log
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── routers/
+│   │   │   ├── services/
+│   │   │   │   └── user_service.py
+│   │   │   ├── templates/
+│   │   │   │   └── index.html
+│   │   │   └── main.py # Вход в API
+│   │   ├── bot/
+│   │   │   ├── core/
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── callbacks.py
+│   │   │   ├── handlers/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── admin_handlers.py
+│   │   │   │   ├── cart_handlers.py
+│   │   │   │   ├── handlers_routers.py
+│   │   │   │   ├── navigation_handlers.py
+│   │   │   │   ├── order_handlers.py
+│   │   │   │   └── payment_handlers.py
+│   │   │   ├── keyboards/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── admin_keyboards.py
+│   │   │   │   ├── navigation_keyboards.py
+│   │   │   │   ├── order_keyboards.py
+│   │   │   │   └── testing_keyboards.py
+│   │   │   ├── services/
+│   │   │   │   └── cart_service.py
+│   │   │   ├── utils/
+│   │   │   │   └── validators.py
+│   │   │   └── main.py # Вход в бота
+│   │   ├── config/
+│   │   │   ├── logger.py
 │   │   │   └── settings.py
-│   │   ├── database
-│   │   │   ├── models.py
-│   │   │   ├── redis_db.py
-│   │   │   ├── shop.db
-│   │   │   ├── sqlite_db_dump.sql
-│   │   │   └── sqlite_db.py
-│   │   └── main.py
-│   └── tests
-│       └── ...
+│   │   └── database/
+│   │       ├── models.py
+│   │       ├── redis_db.py
+│   │       ├── shop.db
+│   │       ├── sqlite_db_dump.sql
+│   │       └── sqlite_db.py
+│   └── tests/
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
@@ -80,7 +106,7 @@ Aiogram-Bot/
 ## 🛠️ Технологии
 ![](https://img.shields.io/badge/python_3.13.5-blue?logo=python&logoColor=yellow) - основной язык
 
-![](https://img.shields.io/badge/aiogram_3.21.0-blue?logo=telegram&logoColor=white) - современный фреймворк для Telegram ботов
+![](https://img.shields.io/badge/aiogram_3.21-blue?logo=telegram&logoColor=white) - современный фреймворк для Telegram ботов
 
 ![](https://img.shields.io/badge/SQLAlchemy_2.x.x-orange?logo=sqlalchemy&logoColor=white) - работа с базой данных
 
@@ -103,12 +129,35 @@ Aiogram-Bot/
 
 - Легкая кастомизация
 
-## TODO
+## 📷 Примеры работы бота
+
+- Главное меню (вид для администратора)
+![alt text](images/image.png)
+- Админпанель
+![alt text](images/image-7.png)
+- Каталог (в данном случае пицц)
+![alt text](images/image-2.png)
+- Информация о товаре при нажатии
+![alt text](images/image-3.png)
+- Корзина с показом стоимости
+![alt text](images/image-4.png)
+- Оформление заказа
+![alt text](images/image-5.png)
+- Список заказов пользователя с отображением состояния
+![alt text](images/image-6.png)
+
+## DONE
 - [x] CRUD для заказов, продуктов
 - [x] Корзина Redis
 - [x] Админка через Telegram
 - [x] Оплата (тестовая)
+
+## ONGOING
+
+- [ ] Админка через FastAPI <--
 - [ ] Тесты
-- [ ] Админка через FastAPI
+
+## TODO
+
 - [ ] PostgreSQL
 

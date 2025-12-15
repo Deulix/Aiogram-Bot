@@ -1,9 +1,13 @@
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from redis.asyncio import Redis
 
-from app.bot.core.callbacks import CartCallback, MenuNavigationCallback, ProductCallback
+from src.app.bot.core.callbacks import (
+    CartCallback,
+    MenuNavigationCallback,
+    ProductCallback,
+)
 from src.app.bot.keyboards import nav_kb
 from src.app.bot.services.cart_service import Cart, getall
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
@@ -11,17 +15,19 @@ from src.app.database.sqlite_db import AsyncSQLiteDatabase
 cart_router = Router()
 
 
-@cart_router.callback_query(ProductCallback.filter(action="add_to_cart"))
+@cart_router.callback_query(ProductCallback.filter(F.action == "add_to_cart"))
 async def cmd_add_to_cart(
     callback: CallbackQuery,
     callback_data: ProductCallback,
     redis: Redis,
     db: AsyncSQLiteDatabase,
 ):
-    (cart, product, size, products, quantity, product_key) = await getall(
+    (cart, product, size, products, product_key) = await getall(
         callback, callback_data, redis, db
     )
-    await cart.increase_prod_count(product_key)
+    await cart.increase_prod_count(product.id, size)
+    await cart.add_price_amount(product.get_size_price(size))
+    quantity = await redis.hget(cart.cart_key, product_key)
 
     cart_amount = await cart.get_current_price_amount()
 
@@ -32,14 +38,14 @@ async def cmd_add_to_cart(
     )
 
 
-@cart_router.callback_query(MenuNavigationCallback.filter(action="cart"))
+@cart_router.callback_query(MenuNavigationCallback.filter(F.action == "cart"))
 async def cmd_cart_menu(
     callback: CallbackQuery, redis: Redis, db: AsyncSQLiteDatabase, state: FSMContext
 ):
     await state.clear()
 
     user_id = callback.from_user.id
-    cart = Cart(user_id, redis)
+    cart = Cart(user_id, redis, db)
 
     cart_items = await cart.get_cart_items()
     cart_amount = await cart.get_current_price_amount()
@@ -50,17 +56,15 @@ async def cmd_cart_menu(
     )
 
 
-@cart_router.callback_query(CartCallback.filter(action="increase"))
+@cart_router.callback_query(CartCallback.filter(F.action == "increase"))
 async def cmd_plus_quantity(
     callback: CallbackQuery,
     callback_data: ProductCallback,
     redis: Redis,
     db: AsyncSQLiteDatabase,
 ):
-    (cart, product, size, _, _, product_key) = await getall(
-        callback, callback_data, redis, db
-    )
-    await cart.increase_prod_count(product_key)
+    (cart, product, size, _, _) = await getall(callback, callback_data, redis, db)
+    await cart.increase_prod_count(product.id, size)
     await cart.add_price_amount(product.get_size_price(size))
 
     cart_amount = await cart.get_current_price_amount()
@@ -72,21 +76,23 @@ async def cmd_plus_quantity(
     )
 
 
-@cart_router.callback_query(CartCallback.filter(action="decrease"))
+@cart_router.callback_query(CartCallback.filter(F.action == "decrease"))
 async def cmd_minus_quantity(
     callback: CallbackQuery,
     callback_data: ProductCallback,
     redis: Redis,
     db: AsyncSQLiteDatabase,
 ):
-    (cart, product, size, _, quantity, product_key) = await getall(
+    (cart, product, size, _, product_key) = await getall(
         callback, callback_data, redis, db
     )
-    if int(quantity) > 1:
-        await cart.decrease_prod_count(product_key)
+    quantity = int(await redis.hget(cart.cart_key, product_key))
+    if quantity > 1:
+        await cart.decrease_prod_count(product.id, size)
     else:
-        await cart.delete_product(product_key)
-    await cart.sub_price_amount(product.get_size_price(size))
+        await cart.delete_product(product.id, size)
+    price = product.get_size_price(size)
+    await cart.sub_price_amount(price)
     cart_amount = await cart.get_current_price_amount()
     cart_items = await cart.get_cart_items()
     await callback.message.edit_text(
@@ -95,18 +101,21 @@ async def cmd_minus_quantity(
     )
 
 
-@cart_router.callback_query(CartCallback.filter(action="delete"))
+@cart_router.callback_query(CartCallback.filter(F.action == "delete"))
 async def cmd_delete_from_cart(
     callback: CallbackQuery,
     callback_data: ProductCallback,
     redis: Redis,
     db: AsyncSQLiteDatabase,
 ):
-    (cart, product, size, _, quantity, product_key) = await getall(
+    (cart, product, size, _, product_key) = await getall(
         callback, callback_data, redis, db
     )
-    await cart.delete_product(product_key)
+    quantity = int(await redis.hget(cart.cart_key, product_key))
+
+    await cart.delete_product(product.id, size)
     await cart.sub_price_amount(product.get_size_price(size) * quantity)
+
     cart_amount = await cart.get_current_price_amount()
     cart_items = await cart.get_cart_items()
     await callback.message.edit_text(
@@ -115,7 +124,7 @@ async def cmd_delete_from_cart(
     )
 
 
-@cart_router.callback_query(CartCallback.filter(action="erase_all"))
+@cart_router.callback_query(CartCallback.filter(F.action == "erase_all"))
 async def cmd_erase_cart(
     callback: CallbackQuery,
     redis: Redis,
@@ -123,7 +132,7 @@ async def cmd_erase_cart(
 ):
     user_id = callback.from_user.id
     user = await db.get_user_by_id(user_id)
-    cart = Cart(callback.from_user.id, redis=redis)
+    cart = Cart(callback.from_user.id, redis, db)
 
     await cart.clear()
     await callback.message.edit_text(

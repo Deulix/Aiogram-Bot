@@ -12,25 +12,25 @@ async def orders(orders: list[Order]):
         keyboard.add(
             InlineKeyboardButton(
                 text=f"{mark[order.status]} Заказ #{order.id} от {order.created_at_local}",
-                callback_data=f"order_{order.id}",
+                callback_data=OrderCallback.get_order_details(order.id),
             )
         )
     keyboard.adjust(1)
     if not orders:
         keyboard.row(
             InlineKeyboardButton(
-                text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG
+                text="📋 Каталог", callback_data=MenuNavigationCallback.CATALOG()
             ),
         )
         keyboard.row(
             InlineKeyboardButton(
-                text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+                text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU()
             ),
         )
     else:
         keyboard.row(
             InlineKeyboardButton(
-                text="⬅️ Назад", callback_data=MenuNavigationCallback.MAIN_MENU
+                text="⬅️ Назад", callback_data=MenuNavigationCallback.MAIN_MENU()
             ),
         )
     return keyboard.as_markup()
@@ -53,12 +53,12 @@ async def order_info(order: Order):
         )
     keyboard.row(
         InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=MenuNavigationCallback.ORDERS
+            text="⬅️ Назад", callback_data=MenuNavigationCallback.ORDERS()
         ),
     )
     keyboard.row(
         InlineKeyboardButton(
-            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU()
         ),
     )
     return keyboard.adjust(1).as_markup()
@@ -80,7 +80,7 @@ async def cancel_order(value=""):
         )
     keyboard.add(
         InlineKeyboardButton(
-            text="🛑 Отмена", callback_data=MenuNavigationCallback.CART
+            text="🛑 Отмена", callback_data=MenuNavigationCallback.CART()
         ),
     )
     return keyboard.adjust(1).as_markup()
@@ -96,7 +96,7 @@ async def order_confirm(order_id):
     )
     keyboard.row(
         InlineKeyboardButton(
-            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU
+            text="⏪ Главное меню", callback_data=MenuNavigationCallback.MAIN_MENU()
         ),
     )
     return keyboard.adjust(2).as_markup()
