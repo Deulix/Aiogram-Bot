@@ -209,7 +209,7 @@ async def state_product_create_add_nutrition(
 
 
 @admin_router.callback_query(
-    AdminCallback.filter((F.action == "delete_product") & (F.product_id.is_not(None)))
+    AdminCallback.filter((F.action == "delete_product") & (F.product_id.is_(None)))
 )
 async def cmd_product_delete(callback: CallbackQuery, db: AsyncSQLiteDatabase):
     products = await db.get_products()
@@ -234,9 +234,7 @@ async def cmd_product_confirm_delete(
 
 
 @admin_router.callback_query(
-    AdminCallback.filter(
-        (F.action == "confirm_deleting_product") & (F.product_id.is_not(None))
-    )
+    AdminCallback.filter(F.action == "confirm_deleting_product")
 )
 async def cmd_product_confirmed_delete(
     callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
@@ -254,8 +252,10 @@ class EditProduct(StatesGroup):
     edit = State()
 
 
-@admin_router.callback_query(AdminCallback.filter(F.action == "edit_product"))
-async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
+@admin_router.callback_query(AdminCallback.filter(F.action == "edit_products_list"))
+async def cmd_product_edit_list(
+    callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
+):
     products = await db.get_products()
     await callback.message.edit_text(
         "РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите товар из списка для изменения:",
@@ -264,21 +264,19 @@ async def cmd_product_edit(callback: CallbackQuery, db: AsyncSQLiteDatabase):
 
 
 @admin_router.callback_query(AdminCallback.filter(F.action == "edit_product"))
-async def cmd_product_edit_choose(
+async def cmd_product_edit(
     callback: CallbackQuery, callback_data: AdminCallback, db: AsyncSQLiteDatabase
 ):
     product_id = callback_data.product_id
     product = await db.get_product_by_id(product_id)
     await callback.message.edit_text(
-        "РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите значение из списка для изменения",
+        "РЕДАКТИРОВАНИЕ ТОВАРА \nВыберите значение из списка для изменения:",
         reply_markup=await adm_kb.product_edit_choose(product),
     )
 
 
-@admin_router.callback_query(
-    AdminCallback.filter((F.action == "edit_field") & (F.editing_field.is_not(None)))
-)
-async def cmd_product_edit_choose(  # noqa: F811
+@admin_router.callback_query(AdminCallback.filter(F.action == "edit_field"))
+async def cmd_product_edit_field(  # noqa: F811
     callback: CallbackQuery, callback_data: AdminCallback, state: FSMContext
 ):
     product_id = callback_data.product_id
@@ -312,7 +310,7 @@ async def product_edit_set_new(
     new_field_value = message.text
     await db.edit_product(product_id, editing_field, new_field_value)
     await message.answer(
-        f"РЕДАКТИРОВАНИЕ ТОВАРА \nВыбрано новое значение:\nНовое значение {field_name}: {new_field_value}",
+        f"РЕДАКТИРОВАНИЕ ТОВАРА\nВыбрано новое значение:\nНовое значение {field_name}: {new_field_value}",
         reply_markup=await adm_kb.product_edit_choose(product),
     )
     await state.set_state(EditProduct.edit)

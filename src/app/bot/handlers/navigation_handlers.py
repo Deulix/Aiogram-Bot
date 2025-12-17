@@ -81,9 +81,11 @@ async def category_menu(
     await callback.answer()
 
 
-@navigation_router.callback_query(F.data == "contacts")
+@navigation_router.callback_query(MenuNavigationCallback.filter(F.action == "contacts"))
 async def menu_contacts(callback: CallbackQuery):
-    await callback.answer("Контакты:\n+375291112233", show_alert=True)
+    await callback.answer(
+        "Контакты:\n+375 (29) 111-22-33\n8 (800) 555-35-35", show_alert=True
+    )
 
 
 @navigation_router.callback_query(

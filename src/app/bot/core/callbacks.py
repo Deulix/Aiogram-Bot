@@ -11,7 +11,9 @@ CART_COMMANDS = Literal["increase", "decrease", "erase_all", "delete", "make_ord
 PRODUCT_COMMANDS = Literal["add_to_cart", "view_product_details"]
 ADMIN_COMMANDS = Literal[
     "add_product",
+    "edit_products_list",
     "edit_product",
+    "edit_field",
     "delete_product",
     "confirm_deleting_product",
     "admin_list",
@@ -151,7 +153,7 @@ class AdminCallback(CallbackData, prefix="admin"):
     user_id: int | None = None
 
     @classmethod
-    def ADD_PRODUCT(cls):
+    def ADD_PRODUCTS(cls):
         return cls(action="add_product").pack()
 
     @classmethod
@@ -159,8 +161,8 @@ class AdminCallback(CallbackData, prefix="admin"):
         return cls(action="add_product", product_category=product_category).pack()
 
     @classmethod
-    def EDIT_PRODUCT(cls):
-        return cls(action="edit_product").pack()
+    def EDIT_PRODUCTS(cls):
+        return cls(action="edit_products_list", product_id=None).pack()
 
     @classmethod
     def edit_product(cls, product_id: int):
@@ -181,11 +183,11 @@ class AdminCallback(CallbackData, prefix="admin"):
         ],
     ):
         return cls(
-            action="edit_product", product_id=product_id, editing_field=field
+            action="edit_field", product_id=product_id, editing_field=field
         ).pack()
 
     @classmethod
-    def DELETE_PRODUCT(cls):
+    def DELETE_PRODUCTS(cls):
         return cls(action="delete_product", product_id=None).pack()
 
     @classmethod
@@ -199,6 +201,10 @@ class AdminCallback(CallbackData, prefix="admin"):
     @classmethod
     def ADMIN_LIST(cls):
         return cls(action="admin_list").pack()
+
+    @classmethod
+    def get_admin_info(cls, user_id: int):
+        return cls(action="get_admin_info", user_id=user_id).pack()
 
     @classmethod
     def CREATE_ADMIN(cls):

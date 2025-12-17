@@ -9,13 +9,13 @@ async def admin():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
         InlineKeyboardButton(
-            text="✙ Добавить продукт", callback_data=AdminCallback.ADD_PRODUCT()
+            text="✙ Добавить продукт", callback_data=AdminCallback.ADD_PRODUCTS()
         ),
         InlineKeyboardButton(
-            text="🖍️ Изменить продукт", callback_data=AdminCallback.EDIT_PRODUCT()
+            text="🖍️ Изменить продукт", callback_data=AdminCallback.EDIT_PRODUCTS()
         ),
         InlineKeyboardButton(
-            text="❌ Удалить продукт", callback_data=AdminCallback.DELETE_PRODUCT()
+            text="❌ Удалить продукт", callback_data=AdminCallback.DELETE_PRODUCTS()
         ),
         InlineKeyboardButton(
             text="🛑 Права суперпользователя 🛑",
@@ -90,7 +90,9 @@ async def admin_list(admins: list[User], callback_user: User):
     for admin in admins:
         text = f"{admin.id} - {admin.username} - {admin.first_name}{' (Вы)' if admin.id == callback_user.id else ''}"
         keyboard.add(
-            InlineKeyboardButton(text=text, callback_data=f"admin_id_{admin.id}")
+            InlineKeyboardButton(
+                text=text, callback_data=AdminCallback.get_admin_info(admin.id)
+            )
         )
     keyboard.add(
         InlineKeyboardButton(
@@ -130,7 +132,7 @@ async def confirm_deleting_product(product_id: int):
             callback_data=AdminCallback.confirm_deleting_product(product_id),
         ),
         InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=AdminCallback.DELETE_PRODUCT()
+            text="⬅️ Назад", callback_data=AdminCallback.DELETE_PRODUCTS()
         ),
     )
 
@@ -191,7 +193,7 @@ async def product_edit_choose(product: Product):
     keyboard.adjust(1)
     keyboard.row(
         InlineKeyboardButton(
-            text="⬅️ Назад", callback_data=AdminCallback.EDIT_PRODUCT()
+            text="⬅️ Назад", callback_data=AdminCallback.EDIT_PRODUCTS()
         ),
         InlineKeyboardButton(
             text="⏪ Админпанель", callback_data=MenuNavigationCallback.ADMIN()

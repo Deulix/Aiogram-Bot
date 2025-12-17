@@ -20,7 +20,7 @@ async def test_payment(callback: CallbackQuery):
         LabeledPrice(label="Доставка ТЕСТ", amount=2000),
     ]
     await callback.message.bot.send_invoice(
-        chat_id=callback.message.from_user.id,
+        chat_id=callback.from_user.id,
         title="Заказ пиццы ТЕСТ",
         description="Пицца c доставкой ТЕСТ",
         payload="order_123",
