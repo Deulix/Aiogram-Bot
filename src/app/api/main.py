@@ -1,24 +1,16 @@
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, status
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from src.app.api.routers.auth import auth_router
+from src.app.api.routers.users import user_router
 from src.app.api.services import user_service as us
 from src.app.database.sqlite_db import AsyncSQLiteDatabase
 
 app = FastAPI(title="Админпанель пиццерии")
-
+app.include_router(user_router)
+app.include_router(auth_router)
 templates = Jinja2Templates(directory="src/app/api/templates")
-
-
-@app.get("/")
-async def home(request: Request):
-    return templates.TemplateResponse(
-        name="index.html",
-        context={
-            "request": request,
-            "title": "Главная",
-        },
-    )
 
 
 class UserResponse(BaseModel):

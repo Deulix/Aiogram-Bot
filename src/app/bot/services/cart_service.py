@@ -31,7 +31,7 @@ class Cart:
 
     async def get_current_price_amount(self):
         current_amount = await self.redis.get(self.amount_key)
-        return float(current_amount) if current_amount else None
+        return float(current_amount) if current_amount else 0.0
 
     async def add_price_amount(self, price: float):
         await self.redis.incrbyfloat(self.amount_key, price)

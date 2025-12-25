@@ -1,247 +1,204 @@
-from typing import Literal
-
 from aiogram.filters.callback_data import CallbackData
 
-from src.app.config.settings import CATEGORIES_AVAILABLE, SIZES_AVAILABLE
-
-MENU_COMMANDS = Literal["cart", "main_menu", "catalog", "contacts", "orders", "admin"]
-ORDER_COMMANDS = Literal["order_details", "cancel", "confirm", "edit_street"]
-CATEGORY_COMMANDS = Literal["pizza", "snack", "drink"]
-CART_COMMANDS = Literal["increase", "decrease", "erase_all", "delete", "make_order"]
-PRODUCT_COMMANDS = Literal["add_to_cart", "view_product_details"]
-ADMIN_COMMANDS = Literal[
-    "add_product",
-    "edit_products_list",
-    "edit_product",
-    "edit_field",
-    "delete_product",
-    "confirm_deleting_product",
-    "admin_list",
-    "test_functions",
-    "test_payment",
-    "check_db",
-    "get_admin_info",
-    "create_admin",
-    "dismiss_admin",
-]
-# PAYMENT_COMMANDS = Literal["start_payment", "confirm_payment", "cancel_payment"]
+from src.app.config.constants import (
+    AdminCommands,
+    CartCommands,
+    CategoriesAvailable,
+    CategoryCommands,
+    EditingField,
+    MenuCommands,
+    OrderCommands,
+    ProductCommands,
+    SizesAvailable,
+)
 
 
 class MenuNavigationCallback(CallbackData, prefix="menu"):
-    action: MENU_COMMANDS
+    action: MenuCommands
 
     @classmethod
     def CART(cls):
-        return cls(action="cart").pack()
+        return cls(action=CartCommands.CART)
 
     @classmethod
     def MAIN_MENU(cls):
-        return cls(action="main_menu").pack()
+        return cls(action=MenuCommands.MAIN_MENU)
 
     @classmethod
     def CATALOG(cls):
-        return cls(action="catalog").pack()
+        return cls(action=MenuCommands.CATALOG)
 
     @classmethod
     def CONTACTS(cls):
-        return cls(action="contacts").pack()
+        return cls(action=MenuCommands.CONTACTS)
 
     @classmethod
     def ORDERS(cls):
-        return cls(action="orders").pack()
+        return cls(action=OrderCommands.ORDERS)
 
     @classmethod
     def ADMIN(cls):
-        return cls(action="admin").pack()
+        return cls(action=AdminCommands.ADMIN)
 
 
 class OrderCallback(CallbackData, prefix="order"):
-    action: ORDER_COMMANDS
-    order_id: int | None = None
+    action: OrderCommands
+    order_id: int
 
     @classmethod
     def get_order_details(cls, order_id):
-        return cls(action="order_details", order_id=order_id).pack()
+        return cls(action=OrderCommands.ORDER_DETAILS, order_id=order_id)
 
     @classmethod
     def cancel_order(cls, order_id):
-        return cls(action="cancel", order_id=order_id).pack()
+        return cls(action=OrderCommands.CANCEL, order_id=order_id)
 
     @classmethod
     def confirm_order(cls, order_id):
-        return cls(action="confirm", order_id=order_id).pack()
+        return cls(action=OrderCommands.CONFIRM, order_id=order_id)
 
     @classmethod
     def edit_street(cls):
-        return cls(action="edit_street").pack()
+        return cls(action=OrderCommands.EDIT_STREET)
 
 
 class CategoryNavigationCallback(CallbackData, prefix="category"):
-    action: CATEGORY_COMMANDS
+    action: CategoryCommands
 
     @classmethod
     def PIZZAS(cls):
-        return cls(action="pizza").pack()
+        return cls(action=CategoryCommands.PIZZA)
 
     @classmethod
     def SNACKS(cls):
-        return cls(action="snack").pack()
+        return cls(action=CategoryCommands.SNACK)
 
     @classmethod
     def DRINKS(cls):
-        return cls(action="drink").pack()
+        return cls(action=CategoryCommands.DRINK)
 
 
 class CartCallback(CallbackData, prefix="cart"):
-    action: CART_COMMANDS
+    action: CartCommands
     product_id: int | None = None
-    size: SIZES_AVAILABLE | None = None
+    size: SizesAvailable | None = None
 
     @classmethod
-    def increase(cls, product_id: int, size: SIZES_AVAILABLE):
-        return cls(action="increase", product_id=product_id, size=size).pack()
+    def increase(cls, product_id: int, size: SizesAvailable):
+        return cls(action=CartCommands.INCREASE, product_id=product_id, size=size)
 
     @classmethod
-    def decrease(cls, product_id: int, size: SIZES_AVAILABLE):
-        return cls(action="decrease", product_id=product_id, size=size).pack()
+    def decrease(cls, product_id: int, size: SizesAvailable):
+        return cls(action=CartCommands.DECREASE, product_id=product_id, size=size)
 
     @classmethod
-    def delete(cls, product_id: int, size: SIZES_AVAILABLE):
-        return cls(action="delete", product_id=product_id, size=size).pack()
+    def delete(cls, product_id: int, size: SizesAvailable):
+        return cls(action=CartCommands.DELETE, product_id=product_id, size=size)
 
     @classmethod
     def ERASE_ALL(cls):
-        return cls(action="erase_all").pack()
+        return cls(action=CartCommands.ERASE_ALL)
 
     @classmethod
     def MAKE_ORDER(cls):
-        return cls(action="make_order").pack()
+        return cls(action=CartCommands.MAKE_ORDER)
 
 
 class ProductCallback(CallbackData, prefix="product"):
-    action: PRODUCT_COMMANDS
+    action: ProductCommands
     product_id: int
-    size: SIZES_AVAILABLE | None = None
+    size: SizesAvailable | None = None
 
     @classmethod
     def view_product_details(cls, product_id: int):
-        return cls(action="view_product_details", product_id=product_id).pack()
+        return cls(action=ProductCommands.VIEW_PRODUCT_DETAILS, product_id=product_id)
 
     @classmethod
     def add_small_size(cls, product_id: int):
-        return cls(action="add_to_cart", product_id=product_id, size="small").pack()
+        return cls(
+            action=CartCommands.ADD_TO_CART,
+            product_id=product_id,
+            size=SizesAvailable.SMALL,
+        )
 
     @classmethod
     def add_large_size(cls, product_id: int):
-        return cls(action="add_to_cart", product_id=product_id, size="large").pack()
+        return cls(
+            action=CartCommands.ADD_TO_CART,
+            product_id=product_id,
+            size=SizesAvailable.LARGE,
+        )
 
 
 class AdminCallback(CallbackData, prefix="admin"):
-    action: ADMIN_COMMANDS
-    product_category: CATEGORIES_AVAILABLE | None = None
-    editing_field: Literal[
-        "name",
-        "description",
-        "price_small",
-        "price_large",
-        "ingredients",
-        "nutrition",
-        "category",
-        None,
-    ] = None
+    action: AdminCommands
+    product_category: CategoriesAvailable | None = None
+    editing_field: EditingField | None = None
     product_id: int | None = None
     user_id: int | None = None
 
     @classmethod
     def ADD_PRODUCTS(cls):
-        return cls(action="add_product").pack()
+        return cls(action=AdminCommands.ADD_PRODUCT)
 
     @classmethod
-    def add_product(cls, product_category: CATEGORIES_AVAILABLE):
-        return cls(action="add_product", product_category=product_category).pack()
+    def add_product(cls, product_category: CategoriesAvailable):
+        return cls(action=AdminCommands.ADD_PRODUCT, product_category=product_category)
 
     @classmethod
     def EDIT_PRODUCTS(cls):
-        return cls(action="edit_products_list", product_id=None).pack()
+        return cls(action=AdminCommands.EDIT_PRODUCT, product_id=None)
 
     @classmethod
     def edit_product(cls, product_id: int):
-        return cls(action="edit_product", product_id=product_id).pack()
+        return cls(action=AdminCommands.EDIT_PRODUCT, product_id=product_id)
 
     @classmethod
-    def edit_field(
-        cls,
-        product_id: int,
-        field: Literal[
-            "name",
-            "description",
-            "price_small",
-            "price_large",
-            "ingredients",
-            "nutrition",
-            "category",
-        ],
-    ):
+    def edit_field(cls, product_id: int, field: EditingField):
         return cls(
-            action="edit_field", product_id=product_id, editing_field=field
-        ).pack()
+            action=AdminCommands.EDIT_FIELD, product_id=product_id, editing_field=field
+        )
 
     @classmethod
     def DELETE_PRODUCTS(cls):
-        return cls(action="delete_product", product_id=None).pack()
+        return cls(action=AdminCommands.DELETE_PRODUCT, product_id=None)
 
     @classmethod
     def delete_product(cls, product_id: int):
-        return cls(action="delete_product", product_id=product_id).pack()
+        return cls(action=AdminCommands.DELETE_PRODUCT, product_id=product_id)
 
     @classmethod
     def confirm_deleting_product(cls, product_id: int):
-        return cls(action="confirm_deleting_product", product_id=product_id).pack()
+        return cls(action=AdminCommands.CONFIRM_DELETING_PRODUCT, product_id=product_id)
 
     @classmethod
     def ADMIN_LIST(cls):
-        return cls(action="admin_list").pack()
+        return cls(action=AdminCommands.ADMIN_LIST)
 
     @classmethod
     def get_admin_info(cls, user_id: int):
-        return cls(action="get_admin_info", user_id=user_id).pack()
+        return cls(action=AdminCommands.GET_ADMIN_INFO, user_id=user_id)
 
     @classmethod
     def CREATE_ADMIN(cls):
-        return cls(action="create_admin").pack()
+        return cls(action=AdminCommands.CREATE_ADMIN)
 
     @classmethod
     def create_admin(cls, user_id: int):
-        return cls(action="create_admin", user_id=user_id).pack()
+        return cls(action=AdminCommands.CREATE_ADMIN, user_id=user_id)
 
     @classmethod
     def dismiss_admin(cls, user_id: int):
-        return cls(action="dismiss_admin", user_id=user_id).pack()
+        return cls(action=AdminCommands.DISMISS_ADMIN, user_id=user_id)
 
     @classmethod
     def TEST_FUNCTIONS(cls):
-        return cls(action="test_functions").pack()
+        return cls(action=AdminCommands.TEST_FUNCTIONS)
 
     @classmethod
     def TEST_PAYMENT(cls):
-        return cls(action="test_payment").pack()
+        return cls(action=AdminCommands.TEST_PAYMENT)
 
     @classmethod
     def CHECK_DB(cls):
-        return cls(action="check_db").pack()
-
-
-# class PaymentCallback(CallbackData, prefix="payment"):
-#     action: PAYMENT_COMMANDS
-
-#     @classmethod
-#     def START_PAYMENT(cls):
-#         return cls(action="start_payment").pack()
-
-#     @classmethod
-#     def CONFIRM_PAYMENT(cls):
-#         return cls(action="confirm_payment").pack()
-
-#     @classmethod
-#     def CANCEL_PAYMENT(cls):
-#         return cls(action="cancel_payment").pack()
+        return cls(action=AdminCommands.CHECK_DB)
